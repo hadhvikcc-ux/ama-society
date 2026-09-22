@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy - AMA Smart Society SuperApp</title>
+  <style>
+    :root {
+      --primary: #4338CA;
+      --text: #0F172A;
+      --subtext: #475569;
+      --bg: #F8FAFC;
+      --card-bg: #FFFFFF;
+      --border: #E2E8F0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background: linear-gradient(135deg, #312E81 0%, #4338CA 100%);
+      color: #FFFFFF;
+      padding: 48px 24px;
+      text-align: center;
+    }
+    .header-content {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .badge {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.18);
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
+    h1 {
+      margin: 0 0 8px 0;
+      font-size: 32px;
+      font-weight: 800;
+    }
+    .date {
+      color: #C7D2FE;
+      font-size: 14px;
+    }
+    main {
+      max-width: 800px;
+      margin: -24px auto 48px;
+      padding: 0 16px;
+    }
+    .card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      padding: 36px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      margin-bottom: 24px;
+    }
+    h2 {
+      color: var(--primary);
+      font-size: 20px;
+      margin-top: 28px;
+      margin-bottom: 12px;
+      border-bottom: 1px solid #EEF2FF;
+      padding-bottom: 8px;
+    }
+    h2:first-of-type {
+      margin-top: 0;
+    }
+    p, li {
+      color: var(--subtext);
+      font-size: 15px;
+    }
+    ul {
+      padding-left: 24px;
+      margin-bottom: 16px;
+    }
+    li {
+      margin-bottom: 8px;
+    }
+    strong {
+      color: var(--text);
+    }
+    .highlight-box {
+      background: #EEF2FF;
+      border-left: 4px solid var(--primary);
+      padding: 16px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    footer {
+      text-align: center;
+      padding: 24px;
+      color: #94A3B8;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-content">
+      <div class="badge">OFFICIAL PRIVACY STATEMENT</div>
+      <h1>Privacy Policy</h1>
+      <p class="date">Effective Date: September 20, 2026 • Version 1.0</p>
+    </div>
+  </header>
+
+  <main>
+    <div class="card">
+      <p>
+        Welcome to <strong>AMA (Advanced Management Application)</strong>, operated by AMA Technologies ("we", "our", or "us"). 
+        We are committed to protecting the privacy, security, and confidentiality of our residents, security personnel, vendors, and community members. 
+        This Privacy Policy explains how our mobile application collects, uses, processes, and protects your information in compliance with Google Play Developer Policies.
+      </p>
+
+      <h2>1. Information We Collect</h2>
+      <p>To provide apartment society management, digital gate clearance, and community services, we collect:</p>
+      <ul>
+        <li><strong>Account & Resident Information:</strong> Name, phone number, email address, society association, flat/apartment number, and residency status (Owner/Tenant).</li>
+        <li><strong>Visitor & Gate Pass Data:</strong> Guest names, arrival vehicle registration numbers, visit purpose, arrival timestamps, and single-use digital clearance pass tokens.</li>
+        <li><strong>Financial & Billing Records:</strong> Itemized maintenance invoice statuses, payment confirmation transaction references, and society ledger balances. We do not store complete credit card or debit card numbers on our servers.</li>
+        <li><strong>Operational Support Data:</strong> Maintenance issue descriptions, facility reservations, and contractor work order bids.</li>
+      </ul>
+
+      <h2>2. Device Permissions & How They Are Used</h2>
+      <p>Our application requests only the minimal necessary Android device permissions to deliver specific features:</p>
+      <ul>
+        <li><strong>Camera (<code>android.permission.CAMERA</code>):</strong> Used exclusively by security guards to scan QR codes on digital gate passes, and by residents/technicians to capture photos or short inspection videos for maintenance tickets. Camera streams are processed locally and never recorded in the background.</li>
+        <li><strong>Location (<code>ACCESS_FINE_LOCATION</code> & <code>ACCESS_COARSE_LOCATION</code>):</strong> Used solely while the application is actively in use to render real-time vehicle GPS positions for campus cab hailings and Bazaar Mart grocery deliveries on Google Maps. Location data is never tracked when the app is closed, nor shared with data brokers or advertising networks.</li>
+        <li><strong>Push Notifications (<code>POST_NOTIFICATIONS</code>):</strong> Used to deliver real-time security alerts (guest arrived at gate, boom barrier clearance, emergency SOS panic alarms, and delivery drop-off notifications).</li>
+        <li><strong>Biometric Authentication (<code>USE_BIOMETRIC</code>):</strong> Enables residents to quickly authenticate and display gate passes using device hardware (fingerprint or face recognition). Biometric sensor data is managed entirely by Android KeyStore on your device and is never transmitted to or stored on our servers.</li>
+        <li><strong>Photos & Media Storage (<code>READ_MEDIA_IMAGES</code>):</strong> Used only when you voluntarily attach an existing photo or receipt to a maintenance work order ticket.</li>
+      </ul>
+
+      <div class="highlight-box">
+        <strong>Important Commitment:</strong> AMA does <em>not</em> sell, rent, monetize, or trade your personal data, location traces, or visitor rosters to third-party advertising networks or data brokers.
+      </div>
+
+      <h2>3. Data Protection & Security Practices</h2>
+      <p>We implement enterprise-grade security measures to safeguard your information:</p>
+      <ul>
+        <li><strong>Encryption in Transit:</strong> All communications between your mobile device and our backend APIs are encrypted using modern Transport Layer Security (TLS 1.3 / HTTPS).</li>
+        <li><strong>Data Masking:</strong> Sensitive phone numbers and email addresses displayed in visitor registries and domestic helper directories are masked by default to protect individual privacy.</li>
+        <li><strong>Role-Based Access Control (RBAC):</strong> Strict segmentation ensures residents can only access data pertaining to their flat, guards only access gate clearance desks, and administrators only access society committee governance.</li>
+      </ul>
+
+      <h2>4. Data Retention & Account Deletion Rights</h2>
+      <p>
+        We retain society records only for as long as necessary to fulfill community management operations and legal audit requirements. 
+        In accordance with Google Play requirements, users have the right to request deletion of their account and associated data:
+      </p>
+      <ul>
+        <li>You may request complete account deletion at any time by navigating to <strong>Profile &rarr; Account Settings &rarr; Delete Account</strong> in the mobile app, or by emailing our support desk.</li>
+        <li>Upon account deletion verification, all personal identifiers are permanently purged or anonymized within 30 days, subject only to mandatory society statutory audit retention rules.</li>
+      </ul>
+
+      <h2>5. Contact Us</h2>
+      <p>If you have any questions, inquiries, or privacy concerns regarding this Privacy Policy or data handling practices, please contact our Data Protection Officer:</p>
+      <ul>
+        <li><strong>Email:</strong> privacy@ama-society.internal</li>
+        <li><strong>Support Desk:</strong> support@ama-society.internal</li>
+        <li><strong>Organization:</strong> AMA Technologies Smart Living Solutions</li>
+      </ul>
+    </div>
+  </main>
+
+  <footer>
+    &copy; 2026 AMA Technologies. All rights reserved. • Compliant with Google Play Developer Policy
+  </footer>
+
+</body>
+</html>

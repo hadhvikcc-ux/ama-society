@@ -1,0 +1,558 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum UserRole {
+  ADMIN
+  RESIDENT
+  GUARD
+  COMMITTEE
+  VENDOR
+  SUPPLIER
+}
+
+enum TenancyType {
+  OWNER
+  TENANT
+}
+
+enum VisitCategory {
+  GUEST
+  DELIVERY
+  CAB
+  SERVICE
+}
+
+enum VisitPurpose {
+  VISIT
+  DELIVERY
+  PICKUP
+  DROP
+  MAINTENANCE
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  PENDING_VERIFICATION
+  CLOSED
+}
+
+enum TicketCategory {
+  PLUMBING
+  ELECTRICAL
+  CARPENTRY
+  CLEANING
+  OTHER
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum BillingCycle {
+  MONTHLY
+  QUARTERLY
+  YEARLY
+  ONETIME
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum InvoiceStatus {
+  ISSUED
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum LedgerEntryType {
+  CREDIT
+  DEBIT
+}
+
+enum EventPoolStatus {
+  DRAFT
+  VOTING
+  LOCKED
+  COMPLETED
+  CANCELLED
+}
+
+enum PoolParticipantRole {
+  ORGANIZER
+  CONTRIBUTOR
+  VIEWER
+}
+
+enum SurplusResolution {
+  ROLLOVER
+  CASHBACK
+  COMMUNITY_POLL
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+}
+
+enum ChatChannelType {
+  PUBLIC
+  PRIVATE
+  COMMITTEE
+  ANNOUNCEMENT
+  SECURITY_ALERT
+}
+
+enum FacilityPricingTier {
+  STANDARD
+  PREMIUM
+  FREE
+}
+
+// Models
+model Society {
+  id              String   @id @default(uuid())
+  name            String
+  address         String
+  city            String
+  state           String
+  pincode         String
+  totalFlats      Int
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  flats           Flat[]
+  users           User[]
+  chargeTemplates ChargeTemplate[]
+  invoices        Invoice[]
+  ledgerEntries   LedgerEntry[]
+  eventPools      EventPool[]
+  facilities      Facility[]
+  chatChannels    ChatChannel[]
+  tags            TagIndex[]
+  VisitorSession  VisitorSession[]
+  GatePassToken   GatePassToken[]
+  ServiceTicket   ServiceTicket[]
+  FacilityBooking FacilityBooking[]
+  Product         Product[]
+  Order           Order[]
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String?  @unique
+  phone        String   @unique
+  passwordHash String?
+  name         String
+  role         UserRole
+  societyId    String
+  isActive     Boolean  @default(true)
+  fcmToken     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  society            Society          @relation(fields: [societyId], references: [id])
+  flat               Flat?            @relation("FlatTenant", fields: [flatId], references: [id])
+  flatId             String?          @unique
+  ownedFlat          Flat?            @relation("FlatOwner")
+  sentMessages       ChatMessage[]
+  votes              PoolVote[]
+  poolParticipations PoolParticipant[]
+  GatePassToken      GatePassToken[]
+  raisedTickets      ServiceTicket[]  @relation("RaisedTickets")
+  assignedTickets    ServiceTicket[]  @relation("AssignedTickets")
+  FacilityBooking    FacilityBooking[]
+  EventPool          EventPool[]
+  claimedItems       PoolBudgetItem[]
+  buyerOrders        Order[]          @relation("BuyerOrders")
+  vendorOrders       Order[]          @relation("VendorOrders")
+}
+
+
+model Flat {
+  id          String      @id @default(uuid())
+  societyId   String
+  tower       String
+  flatNumber  String
+  floor       Int
+  tenancyType TenancyType
+  ownerId     String?     @unique
+  tenantId    String?     @unique
+  createdAt   DateTime    @default(now())
+
+  society          Society @relation(fields: [societyId], references: [id])
+  owner            User?   @relation("FlatOwner", fields: [ownerId], references: [id])
+  tenant           User?   @relation("FlatTenant")
+  invoices         Invoice[]
+  householdLedgers HouseholdLedger[]
+  tickets          ServiceTicket[]
+  VisitorSession   VisitorSession[]
+}
+
+model VisitorSession {
+  id             String       @id @default(uuid())
+  guardId        String
+  visitorPhone   String
+  visitorName    String
+  category       VisitCategory
+  purpose        VisitPurpose
+  plateNumber    String?
+  flatId         String
+  societyId      String
+  entryTime      DateTime
+  exitTime       DateTime?
+  isOtpVerified  Boolean
+  gatePassCode   String?
+  createdAt      DateTime     @default(now())
+  expiresAt      DateTime
+
+  society        Society @relation(fields: [societyId], references: [id])
+  flat           Flat    @relation(fields: [flatId], references: [id])
+
+  @@index([societyId, createdAt])
+}
+
+model GatePassToken {
+  id        String   @id @default(uuid())
+  userId    String
+  societyId String
+  token     String   @unique
+  isActive  Boolean  @default(true)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user      User    @relation(fields: [userId], references: [id])
+  society   Society @relation(fields: [societyId], references: [id])
+
+  @@index([token])
+}
+
+model ChargeTemplate {
+  id          String       @id @default(uuid())
+  societyId   String
+  name        String
+  description String
+  amount      Decimal
+  cycle       BillingCycle
+  appliesTo   TenancyType
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+
+  society     Society      @relation(fields: [societyId], references: [id])
+  invoices    Invoice[]
+}
+
+model Invoice {
+  id                 String        @id @default(uuid())
+  flatId             String
+  residentId         String
+  societyId          String
+  templateId         String
+  amount             Decimal
+  dueDate            DateTime
+  status             InvoiceStatus @default(ISSUED)
+  pdfUrl             String?
+  razorpayOrderId    String?
+  razorpayPaymentId  String?
+  paidAt             DateTime?
+  createdAt          DateTime      @default(now())
+
+  society            Society        @relation(fields: [societyId], references: [id])
+  flat               Flat           @relation(fields: [flatId], references: [id])
+  template           ChargeTemplate @relation(fields: [templateId], references: [id])
+
+  @@index([residentId, status])
+  @@index([societyId, dueDate])
+}
+
+model LedgerEntry {
+  id             String          @id @default(uuid())
+  societyId      String
+  entryType      LedgerEntryType
+  category       String
+  description    String
+  amount         Decimal
+  referenceId    String?
+  attachmentUrl  String?
+  createdAt      DateTime        @default(now())
+
+  society        Society         @relation(fields: [societyId], references: [id])
+
+  @@index([societyId, createdAt])
+}
+
+model ServiceTicket {
+  id                   String         @id @default(uuid())
+  flatId               String
+  raisedById           String
+  assignedToId         String?
+  societyId            String
+  category             TicketCategory
+  priority             TicketPriority
+  description          String
+  status               TicketStatus   @default(OPEN)
+  beforeMediaUrls      String[]
+  afterMediaUrls       String[]
+  residentSignedOffAt  DateTime?
+  residentSignOffToken String?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  society      Society @relation(fields: [societyId], references: [id])
+  flat         Flat    @relation(fields: [flatId], references: [id])
+  raisedBy     User    @relation("RaisedTickets", fields: [raisedById], references: [id])
+  assignedTo   User?   @relation("AssignedTickets", fields: [assignedToId], references: [id])
+
+  @@index([societyId, status])
+  @@index([raisedById])
+}
+
+model Facility {
+  id                  String   @id @default(uuid())
+  societyId           String
+  name                String
+  description         String
+  residentRatePerHour Decimal
+  externalRatePerHour Decimal
+  maxCapacity         Int
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+
+  society  Society           @relation(fields: [societyId], references: [id])
+  bookings FacilityBooking[]
+}
+
+model FacilityBooking {
+  id               String              @id @default(uuid())
+  facilityId       String
+  bookedById       String
+  societyId        String
+  eventName        String
+  startTime        DateTime
+  endTime          DateTime
+  guestCount       Int
+  pricingTier      FacilityPricingTier
+  totalAmount      Decimal
+  status           PaymentStatus       @default(PENDING)
+  razorpayOrderId  String?
+  guestPassQrUrl   String?
+  createdAt        DateTime            @default(now())
+
+  society  Society  @relation(fields: [societyId], references: [id])
+  facility Facility @relation(fields: [facilityId], references: [id])
+  bookedBy User     @relation(fields: [bookedById], references: [id])
+
+  @@index([facilityId, startTime])
+}
+
+model EventPool {
+  id                    String             @id @default(uuid())
+  societyId             String
+  title                 String
+  description           String
+  eventDate             DateTime
+  status                EventPoolStatus    @default(DRAFT)
+  totalEstimatedBudget  Decimal
+  totalActualExpenses   Decimal            @default(0)
+  totalSponsorships     Decimal            @default(0)
+  votingEndsAt          DateTime?
+  approvalThreshold     Int                @default(60)
+  approvalVotesCount    Int                @default(0)
+  totalVotersCount      Int                @default(0)
+  surplusResolution     SurplusResolution?
+  surplusAmount         Decimal            @default(0)
+  createdById           String
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  society      Society            @relation(fields: [societyId], references: [id])
+  createdBy    User               @relation(fields: [createdById], references: [id])
+  participants PoolParticipant[]
+  budgetItems  PoolBudgetItem[]
+  votes        PoolVote[]
+}
+
+model PoolParticipant {
+  id               String              @id @default(uuid())
+  poolId           String
+  userId           String
+  participantRole  PoolParticipantRole
+  sponsorAmount    Decimal             @default(0)
+  shareAmount      Decimal             @default(0)
+  hasPaid          Boolean             @default(false)
+  createdAt        DateTime            @default(now())
+
+  pool EventPool @relation(fields: [poolId], references: [id])
+  user User      @relation(fields: [userId], references: [id])
+
+  @@unique([poolId, userId])
+}
+
+model PoolBudgetItem {
+  id              String   @id @default(uuid())
+  poolId          String
+  description     String
+  estimatedAmount Decimal
+  actualAmount    Decimal  @default(0)
+  receiptUrl      String?
+  claimedById     String?
+  createdAt       DateTime @default(now())
+
+  pool      EventPool @relation(fields: [poolId], references: [id])
+  claimedBy User?     @relation(fields: [claimedById], references: [id])
+}
+
+model PoolVote {
+  id        String   @id @default(uuid())
+  poolId    String
+  userId    String
+  approved  Boolean
+  createdAt DateTime @default(now())
+
+  pool EventPool @relation(fields: [poolId], references: [id])
+  user User      @relation(fields: [userId], references: [id])
+
+  @@unique([poolId, userId])
+}
+
+model Product {
+  id            String   @id @default(uuid())
+  vendorId      String
+  societyId     String
+  name          String
+  description   String
+  barcode       String?
+  category      String
+  price         Decimal
+  stockQuantity Int      @default(0)
+  imageUrl      String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  society Society     @relation(fields: [societyId], references: [id])
+  items   OrderItem[]
+
+  @@index([barcode])
+  @@index([vendorId])
+}
+
+model Order {
+  id                  String      @id @default(uuid())
+  buyerId             String
+  vendorId            String?
+  societyId           String
+  status              OrderStatus @default(PENDING)
+  totalAmount         Decimal
+  deliveryAddress     String
+  estimatedDeliveryAt DateTime?
+  isExternal          Boolean     @default(false)
+  externalVendorPhone String?
+  createdAt           DateTime    @default(now())
+
+  society Society     @relation(fields: [societyId], references: [id])
+  buyer   User        @relation("BuyerOrders", fields: [buyerId], references: [id])
+  vendor  User?       @relation("VendorOrders", fields: [vendorId], references: [id])
+  items   OrderItem[]
+  bids    VendorBid[]
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  orderId   String
+  productId String
+  quantity  Int
+  unitPrice Decimal
+
+  order   Order   @relation(fields: [orderId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+}
+
+model VendorBid {
+  id          String   @id @default(uuid())
+  orderId     String
+  vendorPhone String
+  vendorName  String
+  bidAmount   Decimal
+  etaMinutes  Int
+  isWinner    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id])
+
+  @@index([orderId])
+}
+
+model HouseholdLedger {
+  id         String   @id @default(uuid())
+  flatId     String
+  month      Int
+  year       Int
+  totalSpend Decimal  @default(0)
+  budgetCap  Decimal  @default(0)
+  splitRule  String   @default("EQUAL")
+  createdAt  DateTime @default(now())
+
+  flat Flat @relation(fields: [flatId], references: [id])
+
+  @@unique([flatId, month, year])
+}
+
+model ChatChannel {
+  id          String          @id @default(uuid())
+  societyId   String
+  type        ChatChannelType
+  name        String
+  description String?
+  isEncrypted Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+
+  society  Society       @relation(fields: [societyId], references: [id])
+  messages ChatMessage[]
+}
+
+model ChatMessage {
+  id          String   @id @default(uuid())
+  channelId   String
+  senderId    String
+  content     String
+  isEncrypted Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  channel ChatChannel @relation(fields: [channelId], references: [id])
+  sender  User        @relation(fields: [senderId], references: [id])
+
+  @@index([channelId, createdAt])
+}
+
+model TagIndex {
+  id         String   @id @default(uuid())
+  tag        String
+  entityType String
+  entityId   String
+  societyId  String
+  flatId     String?
+  createdAt  DateTime @default(now())
+
+  society Society @relation(fields: [societyId], references: [id])
+
+  @@index([tag, societyId])
+  @@index([entityType, entityId])
+}

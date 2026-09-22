@@ -1,0 +1,1 @@
+module.exports = { moduleNameMapper: { '^react-native$': 'react-native-web', '^@react-native-async-storage/async-storage$': '@react-native-async-storage/async-storage/jest/async-storage-mock' }, transform: { '^.+\\.(js|jsx|ts|tsx)$': 'babel-jest' } };

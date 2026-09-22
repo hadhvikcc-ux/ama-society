@@ -1,0 +1,49 @@
+{
+  "expo": {
+    "name": "AMA - Smart Society SuperApp",
+    "slug": "ama-society",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "scheme": "ama",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#4338CA"
+    },
+    "android": {
+      "package": "com.ama.society",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#4338CA"
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_EXTERNAL_STORAGE"
+      ],
+      "softwareKeyboardLayoutMode": "resize"
+    },
+    "ios": {
+      "bundleIdentifier": "com.ama.society",
+      "buildNumber": "1"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-camera",
+      "expo-notifications",
+      "expo-barcode-scanner",
+      "expo-secure-store"
+    ],
+    "extra": {
+      "apiUrl": "process.env.EXPO_PUBLIC_API_URL"
+    }
+  }
+}

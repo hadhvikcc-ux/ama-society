@@ -1,0 +1,59 @@
+# dependencies
+node_modules
+.pnp
+.pnp.js
+
+# testing
+coverage
+
+# production
+build
+dist
+.next
+*.aab
+*.apk
+
+# misc
+.DS_Store
+*.pem
+*.keystore
+*.jks
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# local env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# turborepo
+.turbo
+
+# Expo / React Native
+.expo
+android/
+ios/
+.neon
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# pnpm
+.pnpm-store/
+pnpm-lock.yaml.bak
+
+# Prisma
+prisma/migrations/*.sql.bak
+
+# OS
+Thumbs.db
+ehthumbs.db
