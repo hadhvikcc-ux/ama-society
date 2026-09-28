@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.module';
 import { CreateChargeTemplateDto, CreateExpenseDto, PaymentWebhookDto } from './dto/billing.dto';
 import * as crypto from 'crypto';
@@ -109,17 +109,21 @@ export class BillingService {
   }
 
   async handlePaymentWebhook(body: PaymentWebhookDto) {
-    const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || 'mock_secret';
-    
+    const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET;
+    if (!RAZORPAY_KEY_SECRET) {
+      throw new ServiceUnavailableException('Payment verification is not configured');
+    }
+
     const expectedSignature = crypto
       .createHmac('sha256', RAZORPAY_KEY_SECRET)
       .update(`${body.razorpay_order_id}|${body.razorpay_payment_id}`)
       .digest('hex');
-      
-    // In real app, we verify signature. Mocking it here.
-    const isValid = body.razorpay_signature === expectedSignature || true; 
-    
-    if (!isValid) throw new Error('Invalid signature');
+
+    const expected = Buffer.from(expectedSignature);
+    const received = Buffer.from(body.razorpay_signature);
+    const isValid = expected.length === received.length && crypto.timingSafeEqual(expected, received);
+
+    if (!isValid) throw new BadRequestException('Invalid signature');
     
     const invoice = await this.prisma.invoice.findFirst({
       where: { razorpayOrderId: body.razorpay_order_id },

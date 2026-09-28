@@ -24,7 +24,7 @@ export class AuthService {
       where: {
         OR: [
           { id: dto.societyCode },
-          { name: { startsWith: dto.societyCode } },
+          { name: dto.societyCode },
         ],
       },
     });
@@ -33,10 +33,8 @@ export class AuthService {
       throw new NotFoundException('Society not found');
     }
 
-    let prismaRole = dto.role as any;
-    if (dto.role === 'RESIDENT_OWNER' || dto.role === 'RESIDENT_TENANT') {
-      prismaRole = 'RESIDENT';
-    }
+    // RegisterDto only admits resident roles; never let the caller pick a privileged one.
+    const prismaRole = 'RESIDENT';
 
     const user = await this.prisma.user.create({
       data: {
