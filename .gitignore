@@ -57,3 +57,6 @@ prisma/migrations/*.sql.bak
 # OS
 Thumbs.db
 ehthumbs.db
+
+# Firebase
+.firebase/

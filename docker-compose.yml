@@ -31,19 +31,21 @@ services:
       retries: 5
 
   api:
-    build: 
-      context: ./packages/api
+    build:
+      context: .
+      dockerfile: packages/api/Dockerfile
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     env_file: .env
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgres://ama:ama_secret@postgres:5432/ama_db
+      REDIS_URL: redis://redis:6379
     ports:
       - "3000:3000"
-    volumes:
-      - ./packages/api:/usr/src/app
-      - /usr/src/app/node_modules
 
 volumes:
   postgres_data:
