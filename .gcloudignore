@@ -1,0 +1,11 @@
+.git
+.gitignore
+**/node_modules
+**/dist
+**/.env
+**/.env.*
+**/.cert
+**/*.pem
+**/.expo
+**/.turbo
+apps/mobile

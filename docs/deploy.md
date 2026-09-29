@@ -8,7 +8,7 @@
 | Web app | Firebase Hosting | `firebase.json`, serves `apps/mobile/dist`, proxies `/api/**` to Cloud Run |
 | Android / iOS | Expo EAS Build + Submit | `apps/mobile/eas.json` |
 
-All commands run from the repo root unless noted. Replace `PROJECT_ID` with your Google Cloud / Firebase project id.
+All commands run from the repo root unless noted. They are written for bash; on Windows, see [Windows (PowerShell)](#windows-powershell) at the end. Replace `PROJECT_ID` with your Google Cloud / Firebase project id.
 
 ## 1. Google Cloud project
 
@@ -44,12 +44,7 @@ The Cloud Run service account needs `roles/secretmanager.secretAccessor` and `ro
 
 ```bash
 gcloud artifacts repositories create ama --repository-format=docker --location=asia-south1
-gcloud builds submit --config=/dev/stdin . <<'EOF'
-steps:
-  - name: gcr.io/cloud-builders/docker
-    args: [build, -f, packages/api/Dockerfile, -t, asia-south1-docker.pkg.dev/$PROJECT_ID/ama/ama-api, .]
-images: [asia-south1-docker.pkg.dev/$PROJECT_ID/ama/ama-api]
-EOF
+gcloud builds submit --config cloudbuild.yaml .
 
 gcloud run deploy ama-api --region=asia-south1 \
   --image=asia-south1-docker.pkg.dev/PROJECT_ID/ama/ama-api \
@@ -57,6 +52,8 @@ gcloud run deploy ama-api --region=asia-south1 \
   --set-secrets=DATABASE_URL=DATABASE_URL:latest,REDIS_URL=REDIS_URL:latest,JWT_SECRET=JWT_SECRET:latest,JWT_REFRESH_SECRET=JWT_REFRESH_SECRET:latest,RAZORPAY_KEY_SECRET=RAZORPAY_KEY_SECRET:latest \
   --allow-unauthenticated --min-instances=1
 ```
+
+With Neon/Upstash instead of Cloud SQL, drop the `--add-cloudsql-instances` line.
 
 The container runs `prisma migrate deploy` on start. Seed demo data once, if wanted, with `npx ts-node prisma/seed.ts` from `packages/api` against the same `DATABASE_URL`.
 
@@ -87,3 +84,33 @@ eas submit -p android --profile production   # needs google-service-account.json
 ```
 
 Set `EXPO_PUBLIC_API_URL` as an EAS environment variable (`eas env:create`) so every build gets it.
+
+## Windows (PowerShell)
+
+Install the tools (then open a **new** PowerShell window so `PATH` updates):
+
+```powershell
+winget install --id Google.CloudSDK -e
+winget install --id OpenJS.NodeJS.LTS -e
+npm install -g firebase-tools eas-cli pnpm@9
+```
+
+Differences from the bash commands above:
+
+- **Line continuation** is a backtick `` ` `` instead of `\`, or put the whole command on one line.
+- **Secrets:** piping a string adds a newline in PowerShell, so write the value to a file without one:
+
+  ```powershell
+  Set-Content -NoNewline -Path secret.txt -Value "postgresql://..."
+  gcloud secrets create DATABASE_URL --data-file=secret.txt
+  Remove-Item secret.txt
+  ```
+
+- **Random JWT secrets** (instead of `openssl rand -hex 32`):
+
+  ```powershell
+  $b = New-Object byte[] 32; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b)
+  -join ($b | ForEach-Object { '{0:x2}' -f $_ }) | Set-Content -NoNewline secret.txt
+  ```
+
+- **Build env var for EAS:** `$env:EXPO_PUBLIC_API_URL = "https://ama-api-XXXX.a.run.app/api/v1"` on its own line, then run `eas build ...`.
