@@ -114,7 +114,7 @@ export default function AdminBilling() {
       `This is a friendly reminder from Orchid Towers RWA that your society maintenance payment of *₹${flat.amount.toLocaleString('en-IN')}* was due on *${flat.dueDate}* and is currently *OVERDUE*.`,
       '',
       '💳 *Payment Options:*',
-      '• UPI ID: orchid.society@icici',
+      '• UPI ID: 8754401071@ybl',
       '• Bank Transfer / IMPS: ICICI Bank A/C 001105001234, IFSC: ICIC0000011',
       '• Or pay instantly with 0 transaction fee in the AMA Society App: Billing > Pay Now',
       '',

@@ -7,7 +7,7 @@
 import { Linking, Platform } from 'react-native';
 
 export interface UpiPaymentDetails {
-  pa: string; // Payee VPA / UPI ID (e.g. ama.society@icici)
+  pa: string; // Payee VPA / UPI ID (e.g. 8754401071@ybl)
   pn: string; // Payee Name (e.g. AMA Resident Welfare Association)
   am?: number | string; // Transaction Amount (e.g. 4500.00)
   cu?: string; // Currency code (default: INR)
@@ -18,7 +18,7 @@ export interface UpiPaymentDetails {
 
 /**
  * Generates an NPCI-compliant UPI payment URI:
- * e.g. upi://pay?pa=ama.society@icici&pn=AMA%20Society&am=4500.00&cu=INR&tn=Maintenance
+ * e.g. upi://pay?pa=8754401071@ybl&pn=AMA%20Society&am=4500.00&cu=INR&tn=Maintenance
  */
 export function generateUpiUri(details: UpiPaymentDetails): string {
   const params: string[] = [

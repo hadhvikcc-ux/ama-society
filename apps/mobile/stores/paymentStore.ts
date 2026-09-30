@@ -54,7 +54,7 @@ const initialRecords: PaymentRecord[] = [
     id: 'UPI-2026-89412',
     amount: 4500,
     payeeName: 'AMA Resident Welfare Association',
-    payeeUpiId: 'ama.society@icici',
+    payeeUpiId: '8754401071@ybl',
     payerName: 'Aditya Sharma',
     payerFlat: 'B-204',
     category: 'MAINTENANCE',
@@ -100,7 +100,7 @@ export const usePaymentStore = create<PaymentState>()(
     (set, get) => ({
       records: initialRecords,
       myUpiId: 'aditya.sharma@okaxis',
-      societyUpiId: 'ama.society@icici',
+      societyUpiId: '8754401071@ybl',
       societyPayeeName: 'AMA Resident Welfare Association',
       eventFundUpiId: 'ama.events@okhdfcbank',
       eventPayeeName: 'AMA Community Event Fund',
@@ -155,6 +155,17 @@ export const usePaymentStore = create<PaymentState>()(
     {
       name: 'ama-payment-store',
       storage: createJSONStorage(() => AsyncStorage),
+      // Only the payment history and the resident's own UPI ID are saved on the device.
+      // Payee UPI IDs come from the code, so changing them reaches every browser on the next deploy.
+      partialize: (state) => ({ records: state.records, myUpiId: state.myUpiId }),
+      merge: (persisted, current) => {
+        const saved = (persisted ?? {}) as Partial<PaymentState>;
+        return {
+          ...current,
+          records: saved.records ?? current.records,
+          myUpiId: saved.myUpiId ?? current.myUpiId,
+        };
+      },
     }
   )
 );
