@@ -62,6 +62,7 @@ Setup checklist when it doesn't work:
 |---|---|
 | No "Continue with Google" button | Web build made without `EXPO_PUBLIC_FIREBASE_*`: fill `apps/mobile/.env`, re-export, redeploy Hosting. `scripts/deploy-web.ps1` now refuses to deploy a bundle without the config. Both `/auth/login` and `/auth/register` (bento sign-up page) show the button |
 | "This sign-in method is not enabled" | Enable Google / Phone in Firebase Authentication |
+| `auth/configuration-not-found` / "Sign-in is not set up for this Firebase project" | Authentication was never initialised on the project the web build points at: console → Authentication → **Get started**, enable Google. If `apps/mobile/.env` `EXPO_PUBLIC_FIREBASE_PROJECT_ID` isn't the deploy project, delete the file and rerun `deploy-web.ps1 -SkipApi` |
 | "not authorised for sign-in" (`auth/unauthorized-domain`) | Add the domain under Authentication → Settings → Authorized domains |
 | `/auth/firebase` 503 "not configured" | Redeploy Cloud Run with `--set-env-vars="FIREBASE_PROJECT_ID=<project>"` |
 | `/auth/firebase` 401 "Invalid or expired sign-in token" | Website and API point at different Firebase projects |

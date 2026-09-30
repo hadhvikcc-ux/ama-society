@@ -99,6 +99,8 @@ export function firebaseErrorMessage(error: any): string {
       return 'This website is not authorised for sign-in yet (add it under Firebase Authentication → Settings → Authorised domains).';
     case 'auth/operation-not-allowed':
       return 'This sign-in method is not enabled in Firebase yet.';
+    case 'auth/configuration-not-found':
+      return 'Sign-in is not set up for this Firebase project yet (Firebase console → Authentication → Get started, then enable Google).';
     default:
       return error?.message ? `Sign-in failed: ${error.message}` : 'Sign-in failed. Please try again.';
   }
