@@ -29,6 +29,8 @@ export interface BentoRowProps {
   children: React.ReactNode;
   /** Relative widths of the children when side by side, e.g. [2, 1]. Defaults to equal. */
   weights?: number[];
+  /** On phones, stack the tiles in reverse order (e.g. put the action tile above the brand tile). */
+  reverseOnPhone?: boolean;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -36,12 +38,12 @@ export interface BentoRowProps {
  * Tiles side by side on tablets and desktop, stacked on phones.
  * Each child gets its share of the width from `weights`.
  */
-export function BentoRow({ children, weights, style }: BentoRowProps) {
+export function BentoRow({ children, weights, reverseOnPhone, style }: BentoRowProps) {
   const { tileGap, isPhone } = useResponsive();
   const items = React.Children.toArray(children).filter(Boolean);
 
   if (isPhone) {
-    return <View style={[{ gap: tileGap }, style]}>{items}</View>;
+    return <View style={[{ gap: tileGap }, style]}>{reverseOnPhone ? [...items].reverse() : items}</View>;
   }
   return (
     <View style={[{ flexDirection: 'row', alignItems: 'stretch', gap: tileGap }, style]}>

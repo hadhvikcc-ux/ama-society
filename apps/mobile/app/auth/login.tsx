@@ -177,6 +177,8 @@ export default function LoginScreen() {
   const { containerPadding, isPhone } = useResponsive();
   const { setUser, setTokens } = useAuthStore();
   const [tab, setTab] = useState<'email' | 'otp'>('email');
+  // Google is the main way in; email/password and phone OTP sit behind "Other ways to sign in".
+  const [showOtherWays, setShowOtherWays] = useState(!isSocialSignInAvailable);
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -249,6 +251,7 @@ export default function LoginScreen() {
     userName: string
   ) => {
     setTab('email');
+    setShowOtherWays(true);
     setSelectedRole(roleKey);
     setEmail(emailValue);
     setPassword('Password123!');
@@ -435,7 +438,7 @@ export default function LoginScreen() {
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={{ padding: containerPadding, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
         <BentoGrid>
-        <BentoRow weights={[1, 1.15]}>
+        <BentoRow weights={[1, 1.15]} reverseOnPhone>
           {/* Brand tile */}
           <View style={[styles.heroTile, { padding: isPhone ? 22 : 32 }]}>
             <View style={styles.heroChip}>
@@ -495,6 +498,45 @@ export default function LoginScreen() {
             </View>
           )}
 
+          {isSocialSignInAvailable && (
+            <View style={styles.googleBlock}>
+              <TouchableOpacity
+                onPress={handleGoogleSignIn}
+                disabled={loading}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel="Continue with Google"
+              >
+                {/* Styled on an inner View: the web CSS reset clears <button> backgrounds. */}
+                <View style={[styles.googleBtn, loading && { opacity: 0.7 }]}>
+                  {loading ? (
+                    <ActivityIndicator color="#1B4FD8" />
+                  ) : (
+                    <>
+                      <Ionicons name="logo-google" size={22} color="#DB4437" style={{ marginRight: 12 }} />
+                      <Text style={styles.googleBtnText}>Continue with Google</Text>
+                    </>
+                  )}
+                </View>
+              </TouchableOpacity>
+              <Text style={styles.googleHint}>Use the Gmail account you registered with. New to AMA? You'll be set up in one step.</Text>
+
+              <TouchableOpacity
+                style={styles.otherWaysToggle}
+                onPress={() => setShowOtherWays(!showOtherWays)}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: showOtherWays }}
+              >
+                <View style={styles.line} />
+                <Text style={styles.otherWaysText}>Other ways to sign in</Text>
+                <Ionicons name={showOtherWays ? 'chevron-up' : 'chevron-down'} size={14} color="#6B7280" />
+                <View style={styles.line} />
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {showOtherWays && (
+          <>
           <View style={styles.tabs}>
             <TouchableOpacity style={[styles.tab, tab === 'email' && styles.activeTab]} onPress={() => setTab('email')}>
               <Text style={[styles.tabText, tab === 'email' && styles.activeTabText]}>Email &amp; Password</Text>
@@ -503,23 +545,6 @@ export default function LoginScreen() {
               <Text style={[styles.tabText, tab === 'otp' && styles.activeTabText]}>Phone OTP</Text>
             </TouchableOpacity>
           </View>
-
-          {isSocialSignInAvailable && (
-            <View style={styles.googleBlock}>
-              <TouchableOpacity
-                style={[styles.googleBtn, loading && { opacity: 0.7 }]}
-                onPress={handleGoogleSignIn}
-                disabled={loading}
-                activeOpacity={0.85}
-                accessibilityRole="button"
-                accessibilityLabel="Continue with Google"
-              >
-                <Ionicons name="logo-google" size={18} color="#DB4437" style={{ marginRight: 10 }} />
-                <Text style={styles.googleBtnText}>Continue with Google</Text>
-              </TouchableOpacity>
-              <Text style={styles.googleHint}>New here? Sign in with Google or your mobile number to create your resident account.</Text>
-            </View>
-          )}
 
           {tab === 'email' ? (
             <View style={styles.form}>
@@ -643,6 +668,8 @@ export default function LoginScreen() {
                 <Text style={styles.secondaryBtnText}>New User? Register / Sign Up</Text>
               </TouchableOpacity>
             </View>
+          )}
+          </>
           )}
 
           </BentoTile>
@@ -936,19 +963,21 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   secondaryBtnText: { color: '#1B4FD8', fontSize: 15, fontWeight: '700' },
-  googleBlock: { marginBottom: 18 },
+  googleBlock: { marginTop: 4, marginBottom: 8 },
   googleBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#D1D5DB',
-    borderRadius: 14,
-    height: 48,
+    borderWidth: 2,
+    borderColor: '#1B4FD8',
+    borderRadius: 16,
+    height: 58,
   },
-  googleBtnText: { color: '#111827', fontSize: 15, fontWeight: '700' },
-  googleHint: { textAlign: 'center', color: '#6B7280', fontSize: 12, marginTop: 8 },
+  googleBtnText: { color: '#111827', fontSize: 17, fontWeight: '800' },
+  googleHint: { textAlign: 'center', color: '#6B7280', fontSize: 13, marginTop: 10, lineHeight: 18 },
+  otherWaysToggle: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 18, marginBottom: 6 },
+  otherWaysText: { color: '#6B7280', fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
   forgotText: { textAlign: 'center', color: '#6B7280', fontSize: 13, fontWeight: '500', paddingVertical: 4 },
   divider: { flexDirection: 'row', alignItems: 'center', marginTop: 14, marginBottom: 8 },
   line: { flex: 1, height: 1, backgroundColor: '#E5E7EB' },
