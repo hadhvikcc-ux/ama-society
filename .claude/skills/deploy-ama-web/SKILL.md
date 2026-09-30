@@ -96,6 +96,10 @@ A 500 on (1) means a backing service problem, so read the logs. (1) OK but (2) f
 | Website "server error 404" | `/api` rewrite not reaching Cloud Run: same project, `asia-south1`, redeploy Hosting |
 | Console shows nothing | Browser is on a different project (e.g. `ama-society-f2fdb`); switch the picker to the CLI project |
 
+## Removing an unused society
+
+`cd packages\api; $env:DATABASE_URL="<Neon string>"; npx ts-node prisma/delete-empty-society.ts AMA-002` runs a dry run first; add `--yes` to delete. The script refuses if the society has any users or activity, and deletes the society, its flats, charge templates and facilities in one transaction. Run it only after the API with the society-code migration has deployed.
+
 ## Guardrails
 
 - Never ask the user to paste secrets, and remind them to blank passwords in screenshots. If one leaks, have them reset it in Neon/Upstash, then `Update-Secret` and redeploy.
