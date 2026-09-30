@@ -38,7 +38,9 @@ printf '%s' 'redis://HOST:6379' | gcloud secrets create REDIS_URL --data-file=-
 printf '%s' 'YOUR_RAZORPAY_KEY_SECRET' | gcloud secrets create RAZORPAY_KEY_SECRET --data-file=-
 ```
 
-The Cloud Run service account needs `roles/secretmanager.secretAccessor` and `roles/cloudsql.client`.
+The default compute service account (`PROJECT_NUMBER-compute@developer.gserviceaccount.com`) builds the image and runs the API. It needs `roles/cloudbuild.builds.builder` (otherwise the build fails with `storage.objects.get access` denied), `roles/secretmanager.secretAccessor`, and `roles/cloudsql.client` if you use Cloud SQL.
+
+**Redis URL:** Upstash requires TLS, so `REDIS_URL` must start with `rediss://` (copy it from the **ioredis** tab). A `redis://` URL makes every connection fail with `read ECONNRESET` and login returns 500.
 
 ## 2. API on Cloud Run
 
@@ -84,6 +86,10 @@ eas submit -p android --profile production   # needs google-service-account.json
 ```
 
 Set `EXPO_PUBLIC_API_URL` as an EAS environment variable (`eas env:create`) so every build gets it.
+
+## Redeploying
+
+After the first setup, `scripts/deploy-web.ps1` rebuilds and redeploys the API and website in one go, and checks the API responds (`-SkipApi` / `-SkipWeb` to do one half). A Word version of this guide with a full troubleshooting table is in `docs/AMA-Society-Web-Setup-Guide.docx`.
 
 ## Windows (PowerShell)
 
