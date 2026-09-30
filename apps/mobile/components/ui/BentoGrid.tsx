@@ -25,6 +25,35 @@ export function BentoGrid({ children, style, columns }: BentoGridProps) {
   );
 }
 
+export interface BentoRowProps {
+  children: React.ReactNode;
+  /** Relative widths of the children when side by side, e.g. [2, 1]. Defaults to equal. */
+  weights?: number[];
+  style?: StyleProp<ViewStyle>;
+}
+
+/**
+ * Tiles side by side on tablets and desktop, stacked on phones.
+ * Each child gets its share of the width from `weights`.
+ */
+export function BentoRow({ children, weights, style }: BentoRowProps) {
+  const { tileGap, isPhone } = useResponsive();
+  const items = React.Children.toArray(children).filter(Boolean);
+
+  if (isPhone) {
+    return <View style={[{ gap: tileGap }, style]}>{items}</View>;
+  }
+  return (
+    <View style={[{ flexDirection: 'row', alignItems: 'stretch', gap: tileGap }, style]}>
+      {items.map((child, i) => (
+        <View key={i} style={{ flexGrow: weights?.[i] ?? 1, flexBasis: 0, minWidth: 0 }}>
+          {child}
+        </View>
+      ))}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   grid: {
     flexDirection: 'column',

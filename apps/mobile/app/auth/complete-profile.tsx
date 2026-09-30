@@ -7,12 +7,16 @@ import { useAuthStore } from '../../stores/authStore';
 import { getAuthorizedHomeForRole } from '../../utils/rbac';
 import { userFromApi } from '../../utils/session';
 import { getPendingRegistration, setPendingRegistration } from '../../services/pendingRegistration';
+import { BentoGrid, BentoRow } from '../../components/ui/BentoGrid';
+import { BentoTile } from '../../components/ui/BentoTile';
+import { useResponsive } from '../../hooks/useResponsive';
 
 /** Last step of Google / phone OTP sign-up: collects what the provider did not give us. */
 export default function CompleteProfileScreen() {
   const router = useRouter();
   const { setUser, setTokens } = useAuthStore();
   const pending = getPendingRegistration();
+  const { containerPadding, isPhone } = useResponsive();
 
   const [name, setName] = useState(pending?.name ?? '');
   const [phone, setPhone] = useState('');
@@ -63,61 +67,84 @@ export default function CompleteProfileScreen() {
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <View style={styles.card}>
-          <Text style={styles.title}>Complete your profile</Text>
-          <Text style={styles.subtitle}>
-            Signed in as {pending.email ?? `+91 ${pending.phone?.slice(-10)}`}. A few details to set up your resident account.
-          </Text>
-
-          {error && (
-            <View style={styles.errorBox}>
-              <Ionicons name="alert-circle-outline" size={18} color="#B91C1C" />
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          )}
-
-          <Text style={styles.label}>Full name</Text>
-          <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="e.g. Asha Rao" autoComplete="name" />
-
-          {needsPhone && (
-            <>
-              <Text style={styles.label}>Mobile number</Text>
-              <View style={styles.phoneRow}>
-                <Text style={styles.prefix}>+91</Text>
-                <TextInput
-                  style={[styles.input, { flex: 1, marginBottom: 0 }]}
-                  value={phone}
-                  onChangeText={setPhone}
-                  placeholder="10-digit mobile number"
-                  keyboardType="phone-pad"
-                  maxLength={10}
-                />
+      <ScrollView contentContainerStyle={{ padding: containerPadding, paddingBottom: 40, flexGrow: 1, justifyContent: 'center' }}>
+        <BentoGrid style={{ maxWidth: 980 }}>
+          <BentoRow weights={[0.85, 1.15]}>
+            <View style={[styles.hero, { padding: isPhone ? 22 : 30 }]}>
+              <View style={styles.heroChip}>
+                <Ionicons name="checkmark-circle" size={14} color="#FFFFFF" />
+                <Text style={styles.heroChipText}>Verified</Text>
               </View>
-            </>
-          )}
+              <Text style={styles.heroTitle}>Almost there.</Text>
+              <Text style={styles.heroBody}>
+                Signed in as {pending.email ?? `+91 ${pending.phone?.slice(-10)}`}. Tell us who you are and which society you live in.
+              </Text>
+              <View style={styles.codeHint}>
+                <Ionicons name="key" size={18} color="#1B4FD8" />
+                <Text style={styles.codeHintText}>Your committee shares the society code. It looks like <Text style={{ fontWeight: '800' }}>AMA-001</Text>.</Text>
+              </View>
+            </View>
 
-          <Text style={[styles.label, needsPhone && { marginTop: 14 }]}>Society code</Text>
-          <TextInput style={styles.input} value={societyCode} onChangeText={setSocietyCode} placeholder="From your committee, e.g. AMA-001" autoCapitalize="characters" autoCorrect={false} />
-          <Text style={styles.hint}>Your account is created as a resident. The committee can change your role or link your flat later.</Text>
+            <BentoTile style={{ flexGrow: 1 }}>
+              <Text style={styles.title}>Complete your profile</Text>
+              <Text style={styles.subtitle}>You join as a resident. The committee can change your role or link your flat later.</Text>
 
-          <TouchableOpacity style={[styles.primaryBtn, loading && { opacity: 0.7 }]} onPress={submit} disabled={loading} activeOpacity={0.85}>
-            {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryBtnText}>Create my account</Text>}
-          </TouchableOpacity>
+              {error && (
+                <View style={styles.errorBox}>
+                  <Ionicons name="alert-circle-outline" size={18} color="#B91C1C" />
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              )}
 
-          <TouchableOpacity onPress={() => { setPendingRegistration(null); router.replace('/auth/login'); }}>
-            <Text style={styles.backText}>Cancel and go back to sign in</Text>
-          </TouchableOpacity>
-        </View>
+              <Text style={styles.label}>Full name</Text>
+              <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="e.g. Asha Rao" autoComplete="name" />
+
+              {needsPhone && (
+                <>
+                  <Text style={styles.label}>Mobile number</Text>
+                  <View style={styles.phoneRow}>
+                    <Text style={styles.prefix}>+91</Text>
+                    <TextInput
+                      style={[styles.input, { flex: 1, marginBottom: 0 }]}
+                      value={phone}
+                      onChangeText={setPhone}
+                      placeholder="10-digit mobile number"
+                      keyboardType="phone-pad"
+                      maxLength={10}
+                    />
+                  </View>
+                </>
+              )}
+
+              <Text style={[styles.label, needsPhone && { marginTop: 14 }]}>Society code</Text>
+              <TextInput style={styles.input} value={societyCode} onChangeText={setSocietyCode} placeholder="e.g. AMA-001" autoCapitalize="characters" autoCorrect={false} />
+
+              <TouchableOpacity onPress={submit} disabled={loading} activeOpacity={0.85} accessibilityLabel="Create my account">
+                <View style={[styles.primaryBtn, loading && { opacity: 0.7 }]}>
+                  {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryBtnText}>Create my account</Text>}
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={() => { setPendingRegistration(null); router.replace('/auth/login'); }}>
+                <Text style={styles.backText}>Cancel and go back to sign in</Text>
+              </TouchableOpacity>
+            </BentoTile>
+          </BentoRow>
+        </BentoGrid>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#1B4FD8' },
-  scroll: { flexGrow: 1, justifyContent: 'center', padding: 20 },
-  card: { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 24, maxWidth: 520, width: '100%', alignSelf: 'center' },
+  container: { flex: 1, backgroundColor: '#F1F3F9' },
+  hero: { flexGrow: 1, backgroundColor: '#1B4FD8', borderRadius: 24, gap: 14, justifyContent: 'center' },
+  heroChip: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.18)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 },
+  heroChipText: { color: '#FFFFFF', fontWeight: '700', fontSize: 13 },
+  heroTitle: { color: '#FFFFFF', fontSize: 32, lineHeight: 38, fontWeight: '800', letterSpacing: -0.5 },
+  heroBody: { color: '#DBEAFE', fontSize: 15, lineHeight: 22 },
+  codeHint: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#FFFFFF', borderRadius: 14, padding: 14 },
+  codeHintText: { flex: 1, color: '#1E3A8A', fontSize: 13, lineHeight: 19 },
   title: { fontSize: 24, fontWeight: '800', color: '#111827' },
   subtitle: { fontSize: 14, color: '#6B7280', marginTop: 6, marginBottom: 18 },
   label: { fontSize: 13, fontWeight: '700', color: '#374151', marginBottom: 6 },

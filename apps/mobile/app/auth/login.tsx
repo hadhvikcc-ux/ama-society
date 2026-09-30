@@ -5,6 +5,9 @@ import { useAuthStore, AssociationRole } from '../../stores/authStore';
 import { api } from '../../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { getAuthorizedHomeForRole } from '../../utils/rbac';
+import { BentoGrid, BentoRow } from '../../components/ui/BentoGrid';
+import { BentoTile } from '../../components/ui/BentoTile';
+import { useResponsive } from '../../hooks/useResponsive';
 import { userFromApi } from '../../utils/session';
 import { setPendingRegistration } from '../../services/pendingRegistration';
 import {
@@ -171,6 +174,7 @@ const VERIFIED_DEMO_ACCOUNTS: DemoAccount[] = [
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { containerPadding, isPhone } = useResponsive();
   const { setUser, setTokens } = useAuthStore();
   const [tab, setTab] = useState<'email' | 'otp'>('email');
   
@@ -429,44 +433,51 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Top Header Section */}
-        <View style={styles.topSection}>
-          <View style={styles.topBar}>
-            <View style={styles.logoBadge}>
-              <Text style={styles.logoBadgeText}>AMA</Text>
+      <ScrollView contentContainerStyle={{ padding: containerPadding, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+        <BentoGrid>
+        <BentoRow weights={[1, 1.15]}>
+          {/* Brand tile */}
+          <View style={[styles.heroTile, { padding: isPhone ? 22 : 32 }]}>
+            <View style={styles.heroChip}>
+              <Ionicons name="business" size={14} color="#FFFFFF" />
+              <Text style={styles.heroChipText}>AMA Society</Text>
+            </View>
+            <Text style={[styles.heroTitle, isPhone && { fontSize: 28, lineHeight: 34 }]}>Welcome back to your society.</Text>
+            <Text style={styles.heroBody}>Apartment Management &amp; Residents Association — maintenance, gate passes, bookings and tickets in one place.</Text>
+            <View style={styles.heroStats}>
+              {[
+                ['card', 'Pay dues'],
+                ['qr-code', 'Gate passes'],
+                ['calendar', 'Bookings'],
+                ['construct', 'Tickets'],
+              ].map(([icon, label]) => (
+                <View key={label} style={styles.heroStat}>
+                  <Ionicons name={icon as any} size={18} color="#1B4FD8" />
+                  <Text style={styles.heroStatText}>{label}</Text>
+                </View>
+              ))}
             </View>
             <TouchableOpacity
-              style={styles.headerSignUpBtn}
               onPress={() => router.push('/auth/register')}
               activeOpacity={0.85}
               accessibilityRole="button"
-              accessibilityLabel="Sign Up for AMA"
+              accessibilityLabel="Create an account"
             >
-              <Ionicons name="person-add-outline" size={15} color="#FFFFFF" style={{ marginRight: 6 }} />
-              <Text style={styles.headerSignUpBtnText}>Sign Up</Text>
+              {/* Styled on an inner View: the web CSS reset clears <button> backgrounds. */}
+              <View style={styles.heroSignUp}>
+                <Text style={styles.heroSignUpText}>New here? Create your account</Text>
+                <Ionicons name="arrow-forward" size={16} color="#1B4FD8" />
+              </View>
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.emoji}>🏢</Text>
-          <Text style={styles.brandTitle}>AMA Society</Text>
-          <Text style={styles.brandSubtitle}>Apartment Management &amp; Residents Association</Text>
-        </View>
-
-        {/* Bottom Form Section */}
-        <View style={styles.bottomSection}>
+          {/* Sign-in tile */}
+          <BentoTile style={{ flexGrow: 1 }}>
           <View style={styles.headerTitleRow}>
             <View>
-              <Text style={styles.heading}>Welcome Back</Text>
-              <Text style={styles.subheading}>Sign in to your association portal</Text>
+              <Text style={styles.heading}>Sign in</Text>
+              <Text style={styles.subheading}>to your association portal</Text>
             </View>
-            <TouchableOpacity
-              style={styles.quickRegisterPill}
-              onPress={() => router.push('/auth/register')}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.quickRegisterPillText}>+ Register</Text>
-            </TouchableOpacity>
           </View>
 
           {/* Feedback & Error Banners */}
@@ -634,12 +645,12 @@ export default function LoginScreen() {
             </View>
           )}
 
-          {/* Association Roles Divider */}
-          <View style={styles.divider}>
-            <View style={styles.line} />
-            <Text style={styles.orText}>Apartment Association Roles</Text>
-            <View style={styles.line} />
-          </View>
+          </BentoTile>
+        </BentoRow>
+
+        <BentoRow weights={[2, 1]}>
+          <BentoTile color="lavender" style={{ flexGrow: 1 }}>
+          <Text style={styles.tileTitle}>Try a demo role</Text>
           <Text style={styles.rolePickerHint}>
             Select a role to populate demo credentials above. You must click <Text style={{ fontWeight: '700', color: '#1B4FD8' }}>Sign In</Text> to authenticate.
           </Text>
@@ -746,37 +757,39 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Dedicated Sign Up / Registration Bento Card */}
-          <View style={styles.registerCard}>
-            <View style={styles.registerCardTextCol}>
-              <View style={styles.registerCardBadge}>
-                <Text style={styles.registerCardBadgeText}>NEW ONBOARDING</Text>
-              </View>
-              <Text style={styles.registerCardTitle}>New to the Society Association?</Text>
-              <Text style={styles.registerCardDesc}>
-                Register as Flat Owner, Tenant, Committee Member, Security Guard, Technician, Vendor, or Bulk Supplier.
-              </Text>
+          </BentoTile>
+
+          <BentoTile color="peach" style={{ flexGrow: 1, justifyContent: 'space-between' }} onPress={() => router.push('/auth/register')} accessibilityRole="button" accessibilityLabel="Create an account">
+            <View>
+              <Ionicons name="person-add" size={24} color="#7C2D12" />
+              <Text style={[styles.tileTitle, { color: '#7C2D12', marginTop: 10 }]}>New resident?</Text>
+              <Text style={styles.registerCardDesc}>Sign up with Google or your mobile number. You'll need your society code, e.g. AMA-001.</Text>
             </View>
-            <TouchableOpacity
-              style={styles.registerCardBtn}
-              onPress={() => router.push('/auth/register')}
-              activeOpacity={0.88}
-              accessibilityRole="button"
-              accessibilityLabel="Register or Sign Up"
-            >
-              <Ionicons name="person-add" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
-              <Text style={styles.registerCardBtnText}>Sign Up Now</Text>
-              <Ionicons name="arrow-forward" size={16} color="#FFFFFF" style={{ marginLeft: 4 }} />
-            </TouchableOpacity>
-          </View>
-        </View>
+            <View style={styles.registerCardBtn}>
+              <Text style={styles.registerCardBtnText}>Create account</Text>
+              <Ionicons name="arrow-forward" size={16} color="#FFFFFF" style={{ marginLeft: 6 }} />
+            </View>
+          </BentoTile>
+        </BentoRow>
+        </BentoGrid>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#1B4FD8' },
+  container: { flex: 1, backgroundColor: '#F1F3F9' },
+  heroTile: { flexGrow: 1, backgroundColor: '#1B4FD8', borderRadius: 24, gap: 14, justifyContent: 'center' },
+  heroChip: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.18)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 },
+  heroChipText: { color: '#FFFFFF', fontWeight: '700', fontSize: 13 },
+  heroTitle: { color: '#FFFFFF', fontSize: 36, lineHeight: 42, fontWeight: '800', letterSpacing: -0.5 },
+  heroBody: { color: '#DBEAFE', fontSize: 15, lineHeight: 22 },
+  heroStats: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 4 },
+  heroStat: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FFFFFF', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 10 },
+  heroStatText: { color: '#1E3A8A', fontWeight: '700', fontSize: 13 },
+  heroSignUp: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFFFFF', borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, marginTop: 6 },
+  heroSignUpText: { color: '#1B4FD8', fontWeight: '800', fontSize: 14 },
+  tileTitle: { fontSize: 18, fontWeight: '800', color: '#3730A3', marginBottom: 4 },
   scroll: { flexGrow: 1 },
   topSection: {
     paddingTop: Platform.OS === 'web' ? 24 : 48,
@@ -951,12 +964,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginBottom: 20,
   },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    width: '48%',
+    flexGrow: 1,
+    flexBasis: '30%',
+    minWidth: 150,
     paddingHorizontal: 10,
     paddingVertical: 9,
     borderRadius: 14,
@@ -1005,10 +1019,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#0F172A',
-    borderRadius: 12,
-    height: 44,
+    backgroundColor: '#7C2D12',
+    borderRadius: 14,
+    height: 46,
     paddingHorizontal: 16,
+    marginTop: 18,
   },
   registerCardBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
 });

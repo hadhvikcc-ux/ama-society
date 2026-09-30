@@ -77,6 +77,13 @@ if (-not $SkipWeb) {
   Pop-Location
   if ($exit -ne 0) { throw "expo export failed" }
 
+  # Without the Firebase config in the bundle the Google button and SMS sign-up are silently hidden.
+  $apiKey = (Select-String -Path $envFile -Pattern '^EXPO_PUBLIC_FIREBASE_API_KEY=(.+)$').Matches | Select-Object -First 1
+  if (-not $apiKey -or -not (Select-String -Path "apps\mobile\dist\_expo\static\js\web\*.js" -SimpleMatch $apiKey.Groups[1].Value.Trim() -Quiet)) {
+    throw "The web build does not contain the Firebase config from $envFile, so Google / phone sign-in would be hidden. Check $envFile and rerun."
+  }
+  Write-Host "Firebase sign-in config is in the web build (Google and phone OTP enabled)."
+
   Step "Deploying to Firebase Hosting"
   firebase use $Project; Check "firebase use"
   firebase deploy --only hosting; Check "firebase deploy"

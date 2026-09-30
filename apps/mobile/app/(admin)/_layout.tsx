@@ -43,10 +43,10 @@ export default function AdminLayout() {
         }}
       >
         <Tabs.Screen name="index" options={{ title: 'Dashboard', tabBarIcon: ({ color, size }) => <Ionicons name="grid" size={size} color={color} /> }} />
-        <Tabs.Screen name="billing" options={{ title: 'Billing', headerShown: false, tabBarIcon: ({ color, size }) => <Ionicons name="wallet" size={size} color={color} /> }} />
-        <Tabs.Screen name="society" options={{ title: 'Society', headerShown: false, tabBarIcon: ({ color, size }) => <Ionicons name="business" size={size} color={color} /> }} />
-        <Tabs.Screen name="tickets" options={{ title: 'Tickets', headerShown: false, tabBarIcon: ({ color, size }) => <Ionicons name="construct" size={size} color={color} /> }} />
-        <Tabs.Screen name="reports" options={{ title: 'Reports', headerShown: false, tabBarIcon: ({ color, size }) => <Ionicons name="bar-chart" size={size} color={color} /> }} />
+        <Tabs.Screen name="billing/index" options={{ title: 'Billing', headerShown: false, tabBarIcon: ({ color, size }) => <Ionicons name="wallet" size={size} color={color} /> }} />
+        <Tabs.Screen name="society/index" options={{ title: 'Society', headerShown: false, tabBarIcon: ({ color, size }) => <Ionicons name="business" size={size} color={color} /> }} />
+        <Tabs.Screen name="tickets/index" options={{ title: 'Tickets', headerShown: false, tabBarIcon: ({ color, size }) => <Ionicons name="construct" size={size} color={color} /> }} />
+        <Tabs.Screen name="reports/index" options={{ title: 'Reports', headerShown: false, tabBarIcon: ({ color, size }) => <Ionicons name="bar-chart" size={size} color={color} /> }} />
       </Tabs>
 
       <LogoutConfirmModal

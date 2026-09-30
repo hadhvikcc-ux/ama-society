@@ -40,6 +40,7 @@ export async function signInWithGoogle(): Promise<string> {
 }
 
 let recaptcha: RecaptchaVerifier | null = null;
+let recaptchaElement: Element | null = null;
 
 /**
  * Sends an SMS code to an Indian mobile number. `containerId` is a DOM element id
@@ -47,8 +48,20 @@ let recaptcha: RecaptchaVerifier | null = null;
  */
 export async function sendPhoneOtp(tenDigitPhone: string, containerId: string): Promise<ConfirmationResult> {
   const a = firebaseAuth();
+  // The container is re-created when the user moves between sign-in and sign-up screens;
+  // a verifier bound to a detached element cannot be reused.
+  const element = typeof document !== 'undefined' ? document.getElementById(containerId) : null;
+  if (recaptcha && element !== recaptchaElement) {
+    try {
+      recaptcha.clear();
+    } catch {
+      // Already detached with its old screen.
+    }
+    recaptcha = null;
+  }
   if (!recaptcha) {
     recaptcha = new RecaptchaVerifier(a, containerId, { size: 'invisible' });
+    recaptchaElement = element;
   }
   try {
     return await signInWithPhoneNumber(a, `+91${tenDigitPhone}`, recaptcha);
