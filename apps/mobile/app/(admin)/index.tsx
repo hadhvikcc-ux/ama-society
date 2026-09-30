@@ -74,8 +74,16 @@ export default function AdminDashboard() {
               Good Morning, {user?.name ? user.name.split(' ')[0] : 'President'} 👑
             </Text>
             <Text style={styles.heroSubtitle}>
-              {user?.committeePosition || 'RWA President'} • Orchid Towers • {new Date().toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' })}
+              {user?.committeePosition || 'RWA President'} • {user?.societyName || 'Orchid Towers'} • {new Date().toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' })}
             </Text>
+            {/^[A-Z]+-\d{3,}$/.test(user?.societyCode ?? '') && (
+              <View style={styles.societyCodeChip}>
+                <Ionicons name="key-outline" size={14} color="#FFFFFF" />
+                <Text style={styles.societyCodeText}>
+                  Society code <Text style={{ fontWeight: '800' }}>{user?.societyCode}</Text> · share with residents to sign up
+                </Text>
+              </View>
+            )}
           </View>
           <TouchableOpacity
             style={styles.adminLogoutBtn}
@@ -155,6 +163,8 @@ const styles = StyleSheet.create({
   hero: { backgroundColor: '#1B4FD8', padding: 24, paddingTop: 40, borderBottomLeftRadius: 24, borderBottomRightRadius: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   heroTitle: { fontSize: 24, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 8 },
   heroSubtitle: { fontSize: 14, color: '#E5E7EB' },
+  societyCodeChip: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: 10, backgroundColor: 'rgba(255, 255, 255, 0.18)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },
+  societyCodeText: { color: '#FFFFFF', fontSize: 12, fontWeight: '600' },
   adminLogoutBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(239, 68, 68, 0.9)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.15, shadowRadius: 2, elevation: 2 },
   adminLogoutText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
   alertBanner: { backgroundColor: '#DC2626', margin: 16, borderRadius: 12, padding: 16, flexDirection: 'row', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },

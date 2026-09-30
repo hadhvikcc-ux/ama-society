@@ -95,7 +95,7 @@ One-time setup in the Firebase console (same project as Cloud Run):
 
    `scripts/deploy-web.ps1` creates a Firebase web app and writes this file automatically if it is missing; or copy it from **Project settings → Your apps → Web app → SDK setup and configuration**.
 
-New sign-ups join the society whose ID or exact name they type as the society code, always as a resident; the committee changes roles or links flats afterwards. Google and phone sign-in are web-only for now (the Android app keeps email/password).
+New sign-ups type their **society code** (e.g. `AMA-001`, any capitalisation), always join as a resident, and the committee changes roles or links flats afterwards. Admins see the code on their dashboard. Codes are unique; existing societies got one automatically in migration `20260930170000_society_code` (prefix = first word of the name, numbered in creation order), and `prisma/seed.ts` creates `AMA-001` and is safe to re-run. Google and phone sign-in are web-only for now (the Android app keeps email/password).
 
 ## 4. Mobile builds with Expo EAS
 

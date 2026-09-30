@@ -10,6 +10,10 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { CompleteRegistrationDto } from './dto/firebase-auth.dto';
 import { FirebaseAuthService } from './firebase-auth.service';
+import { societyLookup } from '../common/society-code';
+
+// What sign-in responses return alongside the user: their flat and their society's name and code.
+const SESSION_USER_INCLUDE = { flat: true, society: { select: { code: true, name: true } } } as const;
 
 interface RegistrationClaims {
   purpose: 'register';
@@ -61,7 +65,7 @@ export class AuthService {
     const where = claims.email
       ? { email: claims.email }
       : { OR: [{ phone: claims.phone! }, { phone: this.normalizePhone(claims.phone!).national }] };
-    const user = await this.prisma.user.findFirst({ where, include: { flat: true } });
+    const user = await this.prisma.user.findFirst({ where, include: SESSION_USER_INCLUDE });
 
     if (user) {
       if (!user.isActive) throw new UnauthorizedException('This account is disabled');
@@ -92,10 +96,8 @@ export class AuthService {
     if (!rawPhone) throw new BadRequestException('Mobile number is required');
     const { e164, national } = this.normalizePhone(rawPhone);
 
-    const society = await this.prisma.society.findFirst({
-      where: { OR: [{ id: dto.societyCode.trim() }, { name: dto.societyCode.trim() }] },
-    });
-    if (!society) throw new NotFoundException('Society not found. Check the society code with your committee.');
+    const society = await this.prisma.society.findFirst({ where: societyLookup(dto.societyCode) });
+    if (!society) throw new NotFoundException('Society code not found. Check the code (e.g. AMA-001) with your committee.');
 
     const existing = await this.prisma.user.findFirst({
       where: {
@@ -116,7 +118,7 @@ export class AuthService {
           role: 'RESIDENT',
           societyId: society.id,
         },
-        include: { flat: true },
+        include: SESSION_USER_INCLUDE,
       });
     } catch (error: any) {
       if (error?.code === 'P2002') {
@@ -132,14 +134,7 @@ export class AuthService {
 
   async register(dto: RegisterDto) {
     const hashedPassword = await bcrypt.hash(dto.password, 12);
-    const society = await this.prisma.society.findFirst({
-      where: {
-        OR: [
-          { id: dto.societyCode },
-          { name: dto.societyCode },
-        ],
-      },
-    });
+    const society = await this.prisma.society.findFirst({ where: societyLookup(dto.societyCode) });
 
     if (!society) {
       throw new NotFoundException('Society not found');
@@ -167,7 +162,7 @@ export class AuthService {
   async login(dto: LoginDto) {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
-      include: { flat: true },
+      include: SESSION_USER_INCLUDE,
     });
 
     if (!user || !user.passwordHash) {

@@ -3,12 +3,18 @@ import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
+// Safe to re-run: every record is looked up first and only created when missing.
+const SOCIETY_CODE = 'AMA-001';
+
 async function main() {
   console.log('🌱 Starting seed...');
 
-  // 1. Create Society
-  const society = await prisma.society.create({
-    data: {
+  // 1. Society
+  const society = await prisma.society.upsert({
+    where: { code: SOCIETY_CODE },
+    update: {},
+    create: {
+      code: SOCIETY_CODE,
       name: 'AMA Grand Estate',
       address: '123 Prime Avenue',
       city: 'Metropolis',
@@ -17,95 +23,60 @@ async function main() {
       totalFlats: 100,
     },
   });
-  console.log(`✅ Society created: ${society.name} (${society.id})`);
+  console.log(`✅ Society: ${society.name} — code ${society.code}`);
 
-  // 2. Create Flats
-  const flat1 = await prisma.flat.create({
-    data: {
-      societyId: society.id,
-      tower: 'A',
-      flatNumber: '101',
-      floor: 1,
-      tenancyType: TenancyType.OWNER,
-    },
-  });
-  const flat2 = await prisma.flat.create({
-    data: {
-      societyId: society.id,
-      tower: 'B',
-      flatNumber: '201',
-      floor: 2,
-      tenancyType: TenancyType.TENANT,
-    },
-  });
-  console.log(`✅ Flats created: A-101, B-201`);
+  // 2. Flats
+  const flat = async (tower: string, flatNumber: string, floor: number, tenancyType: TenancyType) =>
+    (await prisma.flat.findFirst({ where: { societyId: society.id, tower, flatNumber } })) ??
+    prisma.flat.create({ data: { societyId: society.id, tower, flatNumber, floor, tenancyType } });
+  const flat1 = await flat('A', '101', 1, TenancyType.OWNER);
+  await flat('B', '201', 2, TenancyType.TENANT);
+  console.log(`✅ Flats: A-101, B-201`);
 
-  // 3. Create Users
+  // 3. Users (existing users keep their current password)
   const passwordHash = await bcrypt.hash('password123', 10);
+  const user = (email: string, name: string, phone: string, role: UserRole, flatId?: string) =>
+    prisma.user.upsert({
+      where: { email },
+      update: {},
+      create: { email, name, phone, passwordHash, role, societyId: society.id, flatId },
+    });
+  await user('admin@ama.com', 'Admin User', '1234567890', UserRole.ADMIN);
+  await user('resident@ama.com', 'Resident User', '0987654321', UserRole.RESIDENT, flat1.id);
+  await user('guard@ama.com', 'Gate Guard', '1122334455', UserRole.GUARD);
+  console.log(`✅ Users: admin@ama.com, resident@ama.com, guard@ama.com (password123 for new ones)`);
 
-  const admin = await prisma.user.create({
-    data: {
-      name: 'Admin User',
-      email: 'admin@ama.com',
-      phone: '1234567890',
-      passwordHash,
-      role: UserRole.ADMIN,
-      societyId: society.id,
-    },
-  });
+  // 4. Charge template
+  if (!(await prisma.chargeTemplate.findFirst({ where: { societyId: society.id, name: 'Monthly Maintenance' } }))) {
+    await prisma.chargeTemplate.create({
+      data: {
+        societyId: society.id,
+        name: 'Monthly Maintenance',
+        description: 'Standard monthly maintenance charge',
+        amount: 5000,
+        cycle: 'MONTHLY',
+        appliesTo: 'OWNER',
+      },
+    });
+  }
+  console.log(`✅ Charge template: Monthly Maintenance`);
 
-  const resident = await prisma.user.create({
-    data: {
-      name: 'Resident User',
-      email: 'resident@ama.com',
-      phone: '0987654321',
-      passwordHash,
-      role: UserRole.RESIDENT,
-      societyId: society.id,
-      flatId: flat1.id,
-    },
-  });
+  // 5. Facility
+  if (!(await prisma.facility.findFirst({ where: { societyId: society.id, name: 'Clubhouse' } }))) {
+    await prisma.facility.create({
+      data: {
+        societyId: society.id,
+        name: 'Clubhouse',
+        description: 'Main clubhouse for events',
+        residentRatePerHour: 500,
+        externalRatePerHour: 1500,
+        maxCapacity: 100,
+      },
+    });
+  }
+  console.log(`✅ Facility: Clubhouse`);
 
-  const guard = await prisma.user.create({
-    data: {
-      name: 'Gate Guard',
-      email: 'guard@ama.com',
-      phone: '1122334455',
-      passwordHash,
-      role: UserRole.GUARD,
-      societyId: society.id,
-    },
-  });
-
-  console.log(`✅ Users created: Admin, Resident, Guard (Password for all: password123)`);
-
-  // 4. Create some Charge Templates
-  await prisma.chargeTemplate.create({
-    data: {
-      societyId: society.id,
-      name: 'Monthly Maintenance',
-      description: 'Standard monthly maintenance charge',
-      amount: 5000,
-      cycle: 'MONTHLY',
-      appliesTo: 'OWNER',
-    },
-  });
-  console.log(`✅ Charge Templates created`);
-
-  // 5. Create some default Facilities
-  await prisma.facility.create({
-    data: {
-      societyId: society.id,
-      name: 'Clubhouse',
-      description: 'Main clubhouse for events',
-      residentRatePerHour: 500,
-      externalRatePerHour: 1500,
-      maxCapacity: 100,
-    },
-  });
-  console.log(`✅ Facilities created`);
-
-  console.log('🎉 Seeding finished successfully!');
+  console.log(`🎉 Seeding finished. Residents sign up with society code ${society.code}.`);
 }
 
 main()

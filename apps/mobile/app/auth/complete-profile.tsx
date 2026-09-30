@@ -98,7 +98,7 @@ export default function CompleteProfileScreen() {
           )}
 
           <Text style={[styles.label, needsPhone && { marginTop: 14 }]}>Society code</Text>
-          <TextInput style={styles.input} value={societyCode} onChangeText={setSocietyCode} placeholder="From your committee, e.g. AMA Grand Estate" autoCapitalize="words" />
+          <TextInput style={styles.input} value={societyCode} onChangeText={setSocietyCode} placeholder="From your committee, e.g. AMA-001" autoCapitalize="characters" autoCorrect={false} />
           <Text style={styles.hint}>Your account is created as a resident. The committee can change your role or link your flat later.</Text>
 
           <TouchableOpacity style={[styles.primaryBtn, loading && { opacity: 0.7 }]} onPress={submit} disabled={loading} activeOpacity={0.85}>

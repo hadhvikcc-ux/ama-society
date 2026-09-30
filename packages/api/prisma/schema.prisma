@@ -130,6 +130,8 @@ enum FacilityPricingTier {
 // Models
 model Society {
   id              String   @id @default(uuid())
+  // Short code residents type when signing up, e.g. AMA-001 (always upper case).
+  code            String   @unique
   name            String
   address         String
   city            String

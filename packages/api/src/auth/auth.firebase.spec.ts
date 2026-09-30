@@ -53,11 +53,12 @@ describe('Firebase sign-in', () => {
     expect(first.needsRegistration).toBe(true);
     expect(first.profile).toEqual({ email: 'asha@gmail.com', phone: null, name: 'Asha' });
 
-    await expect(service.completeRegistration({ registrationToken: first.registrationToken, name: 'Asha', societyCode: 'AMA Grand Estate' }))
+    await expect(service.completeRegistration({ registrationToken: first.registrationToken, name: 'Asha', societyCode: 'ama-001' }))
       .rejects.toBeInstanceOf(BadRequestException);
 
-    const done: any = await service.completeRegistration({ registrationToken: first.registrationToken, name: ' Asha ', phone: '98765 43210', societyCode: 'AMA Grand Estate' });
+    const done: any = await service.completeRegistration({ registrationToken: first.registrationToken, name: ' Asha ', phone: '98765 43210', societyCode: 'AMA-001' });
     expect(prisma.user.create.mock.calls[0][0].data).toEqual({ name: 'Asha', email: 'asha@gmail.com', phone: '+919876543210', role: 'RESIDENT', societyId: 's1' });
+    expect(prisma.society.findFirst.mock.calls.at(-1)[0].where).toEqual({ OR: [{ code: 'AMA-001' }, { id: 'AMA-001' }] });
     expect(done.accessToken).toBeDefined();
   });
 

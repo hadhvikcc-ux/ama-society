@@ -12,6 +12,7 @@ export function userFromApi(apiUser: any, fallbackEmail = ''): User {
     role: role as User['role'],
     flatNumber: apiUser.flat?.flatNumber || (isResident ? 'B-204' : undefined),
     tower: apiUser.flat?.tower || (isResident ? 'Tower B' : undefined),
-    societyCode: apiUser.societyId || 'ORC123',
+    societyCode: apiUser.society?.code || apiUser.societyId || 'ORC123',
+    societyName: apiUser.society?.name,
   };
 }

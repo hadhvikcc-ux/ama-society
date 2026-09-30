@@ -23,7 +23,8 @@ export interface User {
   phone?: string;
   tower?: string;
   emergencyContact?: string;
-  societyCode?: string;
+  societyCode?: string;         // Short code residents sign up with, e.g. AMA-001
+  societyName?: string;
   // Role-specific extensions
   designation?: string;         // Admin / Committee / Facility Manager
   committeePosition?: string;   // President, Secretary, Treasurer, Committee Member

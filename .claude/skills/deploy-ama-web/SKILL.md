@@ -49,7 +49,7 @@ gcloud run deploy ama-api --region=asia-south1 --image=asia-south1-docker.pkg.de
 
 ## Google and phone OTP sign-up
 
-Flow: browser signs in with Firebase (Google popup or SMS code with invisible reCAPTCHA) → `POST /api/v1/auth/firebase {idToken}` → existing user (matched by verified Google email, or phone as `+91XXXXXXXXXX` or 10 digits) gets tokens; otherwise `needsRegistration` + 15-minute registration token → `/auth/complete-profile` → `POST /api/v1/auth/register/complete` creates a `RESIDENT`. Web only; Android keeps email/password.
+Flow: browser signs in with Firebase (Google popup or SMS code with invisible reCAPTCHA) → `POST /api/v1/auth/firebase {idToken}` → existing user (matched by verified Google email, or phone as `+91XXXXXXXXXX` or 10 digits) gets tokens; otherwise `needsRegistration` + 15-minute registration token → `/auth/complete-profile` (name, society code such as `AMA-001`, mobile for Google) → `POST /api/v1/auth/register/complete` creates a `RESIDENT`. Society codes are unique, case-insensitive, shown on the admin dashboard; lookup also accepts the society ID. Web only; Android keeps email/password.
 
 Setup checklist when it doesn't work:
 - Firebase console → Authentication → Sign-in method: **Google** and **Phone** enabled.
@@ -65,7 +65,7 @@ Setup checklist when it doesn't work:
 | "not authorised for sign-in" (`auth/unauthorized-domain`) | Add the domain under Authentication → Settings → Authorized domains |
 | `/auth/firebase` 503 "not configured" | Redeploy Cloud Run with `--set-env-vars="FIREBASE_PROJECT_ID=<project>"` |
 | `/auth/firebase` 401 "Invalid or expired sign-in token" | Website and API point at different Firebase projects |
-| Complete-profile 404 "Society not found" | Society code must be the society ID or its exact name |
+| Complete-profile 404 "Society code not found" | Use the code shown on the admin dashboard (e.g. `AMA-001`); names no longer work |
 | Complete-profile 409 | Email or phone already registered; sign in instead |
 
 ## Diagnose in this order
@@ -91,7 +91,7 @@ A 500 on (1) means a backing service problem, so read the logs. (1) OK but (2) f
 | `TypeError: Invalid URL` in ioredis | `REDIS_URL` is placeholder or malformed: `Update-Secret` with the real `rediss://` URL, redeploy |
 | `read ECONNRESET` / `MaxRetriesPerRequestError` | `REDIS_URL` is `redis://` (Upstash's redis-cli snippet puts TLS in a separate `--tls` flag), or the Upstash DB is paused. Fix the scheme in place: `$v=(gcloud secrets versions access latest --secret=REDIS_URL \| Out-String).Trim() -replace '^.*?(rediss?://)','$1' -replace '^redis://','rediss://'; Update-Secret REDIS_URL $v`, then redeploy |
 | `STARTUP TCP probe failed … 8080` | The API crashed on start; the real cause is the log line before it |
-| Seed: `Unique constraint failed … (email)` | Already seeded, so users exist. Don't rerun: each run adds a duplicate society first |
+| Seed: `Unique constraint failed … (email)` | Old seed script: `git pull`. The current seed is idempotent (society `AMA-001`) and safe to re-run |
 | Website "Invalid email or password" | API returned 401. Test (1); seed if there are no users |
 | Website "server error 404" | `/api` rewrite not reaching Cloud Run: same project, `asia-south1`, redeploy Hosting |
 | Console shows nothing | Browser is on a different project (e.g. `ama-society-f2fdb`); switch the picker to the CLI project |
