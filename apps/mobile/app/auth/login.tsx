@@ -232,9 +232,14 @@ export default function LoginScreen() {
           return;
         }
       } catch (err: any) {
-        // The server answered and rejected the credentials: never fall back to local accounts.
+        // The server answered: never fall back to local accounts.
         if (err?.response) {
-          setAuthError('Invalid email or password. Please verify your credentials.');
+          const status = err.response.status;
+          setAuthError(
+            status === 400 || status === 401
+              ? 'Invalid email or password. Please verify your credentials.'
+              : `Sign-in is unavailable right now (server error ${status}). Please try again later.`
+          );
           return;
         }
         // Backend unreachable; offline demo accounts below are for development builds only.
