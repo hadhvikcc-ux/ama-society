@@ -35,7 +35,8 @@ if (-not $SkipApi) {
 
   Step "Deploying $Service to Cloud Run"
   $secrets = "DATABASE_URL=DATABASE_URL:latest,REDIS_URL=REDIS_URL:latest,JWT_SECRET=JWT_SECRET:latest,JWT_REFRESH_SECRET=JWT_REFRESH_SECRET:latest,RAZORPAY_KEY_SECRET=RAZORPAY_KEY_SECRET:latest"
-  gcloud run deploy $Service --region=$Region --image="$Region-docker.pkg.dev/$Project/ama/$Service" --set-secrets=$secrets --allow-unauthenticated; Check "gcloud run deploy"
+  # FIREBASE_PROJECT_ID lets the API verify Google / phone OTP sign-ins (public value, not a secret).
+  gcloud run deploy $Service --region=$Region --image="$Region-docker.pkg.dev/$Project/ama/$Service" --set-secrets=$secrets --set-env-vars="FIREBASE_PROJECT_ID=$Project" --allow-unauthenticated; Check "gcloud run deploy"
 }
 
 $api = (gcloud run services describe $Service --region=$Region --format="value(status.url)").Trim()
@@ -51,6 +52,25 @@ try {
 }
 
 if (-not $SkipWeb) {
+  # Google / phone OTP sign-in needs the Firebase web config baked into the web build.
+  $envFile = "apps\mobile\.env"
+  if (-not ((Test-Path $envFile) -and (Select-String -Path $envFile -Pattern "EXPO_PUBLIC_FIREBASE_API_KEY" -Quiet))) {
+    Step "Fetching the Firebase web app config into $envFile"
+    $apps = (firebase apps:list WEB --project $Project --json | Out-String | ConvertFrom-Json).result
+    if (-not $apps) {
+      firebase apps:create WEB ama-web --project $Project; Check "firebase apps:create"
+      $apps = (firebase apps:list WEB --project $Project --json | Out-String | ConvertFrom-Json).result
+    }
+    $cfg = (firebase apps:sdkconfig WEB $apps[0].appId --project $Project --json | Out-String | ConvertFrom-Json).result.sdkConfig
+    if (-not $cfg.apiKey) { throw "Could not read the Firebase web config. Copy it from Firebase console > Project settings > Your apps into $envFile (see docs/deploy.md)." }
+    @(
+      "EXPO_PUBLIC_FIREBASE_API_KEY=$($cfg.apiKey)",
+      "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=$($cfg.authDomain)",
+      "EXPO_PUBLIC_FIREBASE_PROJECT_ID=$($cfg.projectId)",
+      "EXPO_PUBLIC_FIREBASE_APP_ID=$($cfg.appId)"
+    ) | Out-File -FilePath $envFile -Encoding ascii -Append
+  }
+
   Step "Exporting the website"
   Push-Location apps\mobile
   npx expo export -p web; $exit = $LASTEXITCODE

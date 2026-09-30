@@ -5,6 +5,16 @@ import { useAuthStore, AssociationRole } from '../../stores/authStore';
 import { api } from '../../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { getAuthorizedHomeForRole } from '../../utils/rbac';
+import { userFromApi } from '../../utils/session';
+import { setPendingRegistration } from '../../services/pendingRegistration';
+import {
+  confirmPhoneOtp,
+  firebaseErrorMessage,
+  isSocialSignInAvailable,
+  sendPhoneOtp,
+  signInWithGoogle,
+} from '../../services/firebase';
+import type { ConfirmationResult } from 'firebase/auth';
 
 interface DemoAccount {
   id: string;
@@ -171,6 +181,7 @@ export default function LoginScreen() {
   const [phone, setPhone] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState('');
+  const [confirmation, setConfirmation] = useState<ConfirmationResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [selectionNotice, setSelectionNotice] = useState<string | null>(null);
@@ -179,6 +190,48 @@ export default function LoginScreen() {
   const navigateToRole = (roleStr: string) => {
     const target = getAuthorizedHomeForRole(roleStr);
     router.replace(target as any);
+  };
+
+  const startSession = (data: any, fallbackEmail = '') => {
+    const user = userFromApi(data.user, fallbackEmail);
+    setUser(user);
+    setTokens(data.accessToken, data.refreshToken);
+    navigateToRole(user.role);
+  };
+
+  // Google or phone OTP: exchange the Firebase ID token for an app session, or start sign-up.
+  const finishFirebaseSignIn = async (idToken: string) => {
+    try {
+      const res = await api.post('/auth/firebase', { idToken });
+      if (res.data?.needsRegistration) {
+        setPendingRegistration({ registrationToken: res.data.registrationToken, ...res.data.profile });
+        router.push('/auth/complete-profile');
+        return;
+      }
+      startSession(res.data);
+    } catch (err: any) {
+      const status = err?.response?.status;
+      setAuthError(
+        status === 401
+          ? err.response.data?.message || 'Sign-in was rejected. Please try again.'
+          : status
+            ? `Sign-in is unavailable right now (server error ${status}). Please try again later.`
+            : 'Unable to reach the server. Please check your connection and try again.'
+      );
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setAuthError(null);
+    setLoading(true);
+    try {
+      const idToken = await signInWithGoogle();
+      await finishFirebaseSignIn(idToken);
+    } catch (error: any) {
+      setAuthError(firebaseErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
   };
 
   /**
@@ -216,19 +269,7 @@ export default function LoginScreen() {
       try {
         const res = await api.post('/auth/login', { email: trimmedEmail, password: trimmedPassword });
         if (res.data?.user) {
-          const apiUser = res.data.user;
-          const normalizedRole = (apiUser.role || 'resident').toLowerCase();
-          setUser({
-            id: apiUser.id,
-            name: apiUser.name || trimmedEmail.split('@')[0],
-            email: apiUser.email || trimmedEmail,
-            role: normalizedRole as any,
-            flatNumber: apiUser.flat?.flatNumber || (normalizedRole.includes('resident') ? 'B-204' : undefined),
-            tower: apiUser.flat?.tower || (normalizedRole.includes('resident') ? 'Tower B' : undefined),
-            societyCode: apiUser.societyId || 'ORC123',
-          });
-          setTokens(res.data.accessToken || 'token', res.data.refreshToken || 'refresh');
-          navigateToRole(normalizedRole);
+          startSession(res.data, trimmedEmail);
           return;
         }
       } catch (err: any) {
@@ -309,6 +350,16 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
+      if (isSocialSignInAvailable) {
+        // Real SMS via Firebase Authentication.
+        try {
+          setConfirmation(await sendPhoneOtp(phone.trim(), 'recaptcha-container'));
+          setOtpSent(true);
+        } catch (error: any) {
+          setAuthError(firebaseErrorMessage(error));
+        }
+        return;
+      }
       try {
         await api.post('/auth/otp/send', { phone: phone.trim() });
       } catch {
@@ -329,6 +380,15 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
+      if (confirmation) {
+        try {
+          const idToken = await confirmPhoneOtp(confirmation, otp.trim());
+          await finishFirebaseSignIn(idToken);
+        } catch (error: any) {
+          setAuthError(firebaseErrorMessage(error));
+        }
+        return;
+      }
       try {
         const res = await api.post('/auth/otp/verify', { phone: phone.trim(), code: otp.trim() });
         if (res.data?.user) {
@@ -433,6 +493,23 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </View>
 
+          {isSocialSignInAvailable && (
+            <View style={styles.googleBlock}>
+              <TouchableOpacity
+                style={[styles.googleBtn, loading && { opacity: 0.7 }]}
+                onPress={handleGoogleSignIn}
+                disabled={loading}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel="Continue with Google"
+              >
+                <Ionicons name="logo-google" size={18} color="#DB4437" style={{ marginRight: 10 }} />
+                <Text style={styles.googleBtnText}>Continue with Google</Text>
+              </TouchableOpacity>
+              <Text style={styles.googleHint}>New here? Sign in with Google or your mobile number to create your resident account.</Text>
+            </View>
+          )}
+
           {tab === 'email' ? (
             <View style={styles.form}>
               <View style={styles.inputContainer}>
@@ -536,11 +613,14 @@ export default function LoginScreen() {
                   <TouchableOpacity style={styles.primaryBtn} onPress={handleVerifyOtp} activeOpacity={0.85}>
                     <Text style={styles.primaryBtnText}>Verify &amp; Sign In</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={() => setOtpSent(false)}>
+                  <TouchableOpacity onPress={() => { setOtpSent(false); setConfirmation(null); setOtp(''); }}>
                     <Text style={styles.forgotText}>Resend OTP</Text>
                   </TouchableOpacity>
                 </>
               )}
+
+              {/* Firebase's invisible reCAPTCHA attaches here (web). */}
+              <View nativeID="recaptcha-container" />
 
               {/* Direct Register / Sign Up Button in OTP tab */}
               <TouchableOpacity
@@ -843,6 +923,19 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   secondaryBtnText: { color: '#1B4FD8', fontSize: 15, fontWeight: '700' },
+  googleBlock: { marginBottom: 18 },
+  googleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#D1D5DB',
+    borderRadius: 14,
+    height: 48,
+  },
+  googleBtnText: { color: '#111827', fontSize: 15, fontWeight: '700' },
+  googleHint: { textAlign: 'center', color: '#6B7280', fontSize: 12, marginTop: 8 },
   forgotText: { textAlign: 'center', color: '#6B7280', fontSize: 13, fontWeight: '500', paddingVertical: 4 },
   divider: { flexDirection: 'row', alignItems: 'center', marginTop: 14, marginBottom: 8 },
   line: { flex: 1, height: 1, backgroundColor: '#E5E7EB' },

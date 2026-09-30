@@ -16,6 +16,7 @@ The user usually runs commands themselves in **Windows PowerShell** (often an ol
 | Database | Neon | secret `DATABASE_URL` (`postgresql://…?sslmode=require`) |
 | Redis | Upstash | secret `REDIS_URL` (**must be `rediss://`**) |
 | Other secrets | Secret Manager | `JWT_SECRET`, `JWT_REFRESH_SECRET`, `RAZORPAY_KEY_SECRET` |
+| Google / phone OTP sign-in | Firebase Authentication | API env `FIREBASE_PROJECT_ID`; web build reads `apps/mobile/.env` `EXPO_PUBLIC_FIREBASE_*` |
 
 Firebase Hosting and Cloud Run **must be in the same GCP project** and the service must be in `asia-south1`, or `/api` forwarding breaks. Deploy files live on branch `claude/deploy-setup`: `packages/api/Dockerfile`, `cloudbuild.yaml`, `.gcloudignore`, `firebase.json`, `docs/deploy.md`, `scripts/deploy-web.ps1`.
 
@@ -43,8 +44,29 @@ The script refuses to run when `REDIS_URL` is `redis://` on an Upstash host, bui
 The manual deploy command. Give it **verbatim**, and warn the user never to substitute real values into `--set-secrets`:
 
 ```powershell
-gcloud run deploy ama-api --region=asia-south1 --image=asia-south1-docker.pkg.dev/ama-society/ama/ama-api --set-secrets="DATABASE_URL=DATABASE_URL:latest,REDIS_URL=REDIS_URL:latest,JWT_SECRET=JWT_SECRET:latest,JWT_REFRESH_SECRET=JWT_REFRESH_SECRET:latest,RAZORPAY_KEY_SECRET=RAZORPAY_KEY_SECRET:latest" --allow-unauthenticated
+gcloud run deploy ama-api --region=asia-south1 --image=asia-south1-docker.pkg.dev/ama-society/ama/ama-api --set-secrets="DATABASE_URL=DATABASE_URL:latest,REDIS_URL=REDIS_URL:latest,JWT_SECRET=JWT_SECRET:latest,JWT_REFRESH_SECRET=JWT_REFRESH_SECRET:latest,RAZORPAY_KEY_SECRET=RAZORPAY_KEY_SECRET:latest" --set-env-vars="FIREBASE_PROJECT_ID=ama-society" --allow-unauthenticated
 ```
+
+## Google and phone OTP sign-up
+
+Flow: browser signs in with Firebase (Google popup or SMS code with invisible reCAPTCHA) → `POST /api/v1/auth/firebase {idToken}` → existing user (matched by verified Google email, or phone as `+91XXXXXXXXXX` or 10 digits) gets tokens; otherwise `needsRegistration` + 15-minute registration token → `/auth/complete-profile` → `POST /api/v1/auth/register/complete` creates a `RESIDENT`. Web only; Android keeps email/password.
+
+Setup checklist when it doesn't work:
+- Firebase console → Authentication → Sign-in method: **Google** and **Phone** enabled.
+- Authorized domains include the site's domain (`<project>.web.app` is there by default).
+- Phone SMS needs the Blaze plan; free testing via "Phone numbers for testing".
+- Cloud Run has `FIREBASE_PROJECT_ID` (else `/auth/firebase` returns 503 "not configured").
+- `apps/mobile/.env` has the four `EXPO_PUBLIC_FIREBASE_*` values *before* `expo export` (else the Google button is hidden and OTP falls back to the old non-working flow). `scripts/deploy-web.ps1` writes it via `firebase apps:sdkconfig`.
+
+| Symptom | Fix |
+|---|---|
+| No "Continue with Google" button | Web build made without `EXPO_PUBLIC_FIREBASE_*`: fill `apps/mobile/.env`, re-export, redeploy Hosting |
+| "This sign-in method is not enabled" | Enable Google / Phone in Firebase Authentication |
+| "not authorised for sign-in" (`auth/unauthorized-domain`) | Add the domain under Authentication → Settings → Authorized domains |
+| `/auth/firebase` 503 "not configured" | Redeploy Cloud Run with `--set-env-vars="FIREBASE_PROJECT_ID=<project>"` |
+| `/auth/firebase` 401 "Invalid or expired sign-in token" | Website and API point at different Firebase projects |
+| Complete-profile 404 "Society not found" | Society code must be the society ID or its exact name |
+| Complete-profile 409 | Email or phone already registered; sign in instead |
 
 ## Diagnose in this order
 

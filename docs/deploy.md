@@ -52,6 +52,7 @@ gcloud run deploy ama-api --region=asia-south1 \
   --image=asia-south1-docker.pkg.dev/PROJECT_ID/ama/ama-api \
   --add-cloudsql-instances=PROJECT_ID:asia-south1:ama-db \
   --set-secrets=DATABASE_URL=DATABASE_URL:latest,REDIS_URL=REDIS_URL:latest,JWT_SECRET=JWT_SECRET:latest,JWT_REFRESH_SECRET=JWT_REFRESH_SECRET:latest,RAZORPAY_KEY_SECRET=RAZORPAY_KEY_SECRET:latest \
+  --set-env-vars=FIREBASE_PROJECT_ID=PROJECT_ID \
   --allow-unauthenticated --min-instances=1
 ```
 
@@ -72,6 +73,29 @@ firebase deploy --only hosting
 ```
 
 The web app calls `/api/v1` on its own origin; `firebase.json` rewrites `/api/**` to the `ama-api` Cloud Run service, so no CORS or API URL setup is needed. Firebase Hosting does not proxy WebSockets, so live chat/bidding on web needs `EXPO_PUBLIC_API_URL` pointed at the Cloud Run URL directly.
+
+### Google and phone OTP sign-up
+
+Residents can register and sign in with **Google** or their **mobile number (SMS OTP)** on the website. Both go through Firebase Authentication: the browser signs in with Firebase, the API verifies the Firebase ID token (`POST /api/v1/auth/firebase`), existing users get a session, and new users finish on `/auth/complete-profile` (name, mobile number for Google sign-ups, society code) which calls `POST /api/v1/auth/register/complete` and creates a `RESIDENT`.
+
+One-time setup in the Firebase console (same project as Cloud Run):
+
+1. **Authentication → Get started → Sign-in method**: enable **Google** (pick a support email) and **Phone**.
+2. **Authentication → Settings → Authorized domains**: `PROJECT_ID.web.app` and `PROJECT_ID.firebaseapp.com` are there by default; add any custom domain.
+3. Phone OTP sends real SMS, which needs the project on the Blaze (pay-as-you-go) plan; each SMS has a small charge. For free testing add numbers under **Sign-in method → Phone → Phone numbers for testing** (e.g. `+91 9999999999` / code `123456`).
+4. The API needs `FIREBASE_PROJECT_ID` (set by the deploy command above; not a secret).
+5. The website needs the Firebase **web** config at build time in `apps/mobile/.env` (gitignored; these values are public, not secrets):
+
+   ```
+   EXPO_PUBLIC_FIREBASE_API_KEY=...
+   EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=PROJECT_ID.firebaseapp.com
+   EXPO_PUBLIC_FIREBASE_PROJECT_ID=PROJECT_ID
+   EXPO_PUBLIC_FIREBASE_APP_ID=1:...:web:...
+   ```
+
+   `scripts/deploy-web.ps1` creates a Firebase web app and writes this file automatically if it is missing; or copy it from **Project settings → Your apps → Web app → SDK setup and configuration**.
+
+New sign-ups join the society whose ID or exact name they type as the society code, always as a resident; the committee changes roles or links flats afterwards. Google and phone sign-in are web-only for now (the Android app keeps email/password).
 
 ## 4. Mobile builds with Expo EAS
 

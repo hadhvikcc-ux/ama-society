@@ -110,6 +110,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Generate Prisma client
+        working-directory: packages/api
+        run: npx prisma generate
+
       - name: Run API tests
         working-directory: packages/api
         run: npx jest --passWithNoTests --forceExit

@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException, NotFoundException, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
@@ -8,6 +8,14 @@ import * as bcrypt from 'bcrypt';
 import axios from 'axios';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { CompleteRegistrationDto } from './dto/firebase-auth.dto';
+import { FirebaseAuthService } from './firebase-auth.service';
+
+interface RegistrationClaims {
+  purpose: 'register';
+  email?: string;
+  phone?: string;
+}
 
 @Injectable()
 export class AuthService {
@@ -15,8 +23,112 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly firebaseAuth: FirebaseAuthService,
     @InjectRedis() private readonly redis: Redis,
   ) {}
+
+  // Separate key so a registration token can never pass as an access token.
+  private registrationSecret() {
+    return `${this.configService.get<string>('JWT_SECRET')}:registration`;
+  }
+
+  // Indian mobile numbers: accept "+91 98765 43210", "9876543210", etc.
+  private normalizePhone(phone: string) {
+    const national = phone.replace(/\D/g, '').slice(-10);
+    return { e164: `+91${national}`, national };
+  }
+
+  /**
+   * Google sign-in or phone OTP via Firebase Authentication. Existing users get tokens;
+   * new users get a short-lived registration token to finish sign-up with completeRegistration.
+   */
+  async firebaseLogin(idToken: string) {
+    const decoded = await this.firebaseAuth.verifyIdToken(idToken);
+    const provider = decoded.firebase?.sign_in_provider;
+
+    let claims: RegistrationClaims;
+    if (provider === 'google.com') {
+      if (!decoded.email || !decoded.email_verified) {
+        throw new UnauthorizedException('Your Google account email is not verified');
+      }
+      claims = { purpose: 'register', email: decoded.email.toLowerCase() };
+    } else if (provider === 'phone' && decoded.phone_number) {
+      claims = { purpose: 'register', phone: this.normalizePhone(decoded.phone_number).e164 };
+    } else {
+      throw new UnauthorizedException('Unsupported sign-in method');
+    }
+
+    const where = claims.email
+      ? { email: claims.email }
+      : { OR: [{ phone: claims.phone! }, { phone: this.normalizePhone(claims.phone!).national }] };
+    const user = await this.prisma.user.findFirst({ where, include: { flat: true } });
+
+    if (user) {
+      if (!user.isActive) throw new UnauthorizedException('This account is disabled');
+      const { passwordHash: _, ...safeUser } = user;
+      const tokens = await this.generateTokens(user.id, user.role, user.email ?? '', user.societyId);
+      return { user: safeUser, ...tokens };
+    }
+
+    const registrationToken = this.jwtService.sign(claims, { expiresIn: '15m', secret: this.registrationSecret() });
+    return {
+      needsRegistration: true,
+      registrationToken,
+      profile: { email: claims.email ?? null, phone: claims.phone ?? null, name: decoded.name ?? null },
+    };
+  }
+
+  async completeRegistration(dto: CompleteRegistrationDto) {
+    let claims: RegistrationClaims;
+    try {
+      claims = this.jwtService.verify(dto.registrationToken, { secret: this.registrationSecret() });
+    } catch {
+      throw new UnauthorizedException('Your sign-up session expired. Please sign in again.');
+    }
+    if (claims.purpose !== 'register') throw new UnauthorizedException('Invalid sign-up session');
+
+    // A phone from Firebase is verified by OTP; Google sign-ups type theirs in.
+    const rawPhone = claims.phone ?? dto.phone;
+    if (!rawPhone) throw new BadRequestException('Mobile number is required');
+    const { e164, national } = this.normalizePhone(rawPhone);
+
+    const society = await this.prisma.society.findFirst({
+      where: { OR: [{ id: dto.societyCode.trim() }, { name: dto.societyCode.trim() }] },
+    });
+    if (!society) throw new NotFoundException('Society not found. Check the society code with your committee.');
+
+    const existing = await this.prisma.user.findFirst({
+      where: {
+        OR: [{ phone: e164 }, { phone: national }, ...(claims.email ? [{ email: claims.email }] : [])],
+      },
+    });
+    if (existing) {
+      throw new ConflictException('An account with this email or mobile number already exists. Please sign in instead.');
+    }
+
+    let user;
+    try {
+      user = await this.prisma.user.create({
+        data: {
+          name: dto.name.trim(),
+          email: claims.email ?? null,
+          phone: e164,
+          role: 'RESIDENT',
+          societyId: society.id,
+        },
+        include: { flat: true },
+      });
+    } catch (error: any) {
+      if (error?.code === 'P2002') {
+        throw new ConflictException('An account with this email or mobile number already exists. Please sign in instead.');
+      }
+      throw error;
+    }
+
+    const { passwordHash: _, ...safeUser } = user;
+    const tokens = await this.generateTokens(user.id, user.role, user.email ?? '', user.societyId);
+    return { user: safeUser, ...tokens };
+  }
 
   async register(dto: RegisterDto) {
     const hashedPassword = await bcrypt.hash(dto.password, 12);
