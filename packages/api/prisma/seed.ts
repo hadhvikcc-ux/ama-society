@@ -93,6 +93,12 @@ main()
   .catch((e) => {
     console.error('❌ Error during seeding:');
     console.error(e);
+    // P2021 = table missing, P2022 = column missing: the database is behind schema.prisma.
+    if (e?.code === 'P2021' || e?.code === 'P2022' || /does not exist/i.test(String(e?.message))) {
+      console.error('\n👉 The database is missing recent changes. Run "npx prisma migrate deploy" (same DATABASE_URL), then seed again.');
+    } else if (/Can't reach database server|P1001/.test(String(e?.message))) {
+      console.error('\n👉 Cannot reach the database. Check DATABASE_URL (Neon connection string, ?sslmode=require).');
+    }
     process.exit(1);
   })
   .finally(async () => {
