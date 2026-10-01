@@ -1,9 +1,9 @@
-import { Controller, Post, Body, Get, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, Get, Patch, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto, OtpRequestDto, OtpVerifyDto, RefreshTokenDto } from './dto/login.dto';
-import { CompleteRegistrationDto, FirebaseLoginDto } from './dto/firebase-auth.dto';
+import { CompleteRegistrationDto, FirebaseLoginDto, UpdateAvatarDto } from './dto/firebase-auth.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 
@@ -60,5 +60,13 @@ export class AuthController {
   @ApiBearerAuth()
   async getMe(@CurrentUser() user: any) {
     return this.authService.getMe(user.id);
+  }
+
+  // Set or remove (avatar: null) the signed-in user's profile picture.
+  @Patch('me/avatar')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  async updateAvatar(@CurrentUser() user: any, @Body() dto: UpdateAvatarDto) {
+    return this.authService.updateAvatar(user.id, dto.avatar);
   }
 }

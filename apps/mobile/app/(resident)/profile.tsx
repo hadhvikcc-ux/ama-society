@@ -4,6 +4,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { EditProfileModal } from '../../components/profile/EditProfileModal';
+import { ProfileAvatar } from '../../components/profile/ProfileAvatar';
 import { LegalPolicyModal } from '../../components/legal/LegalPolicyModal';
 import { LogoutConfirmModal } from '../../components/ui/LogoutConfirmModal';
 import { CardGrid, PAGE_MAX_WIDTH, useWideLayout } from '../../components/ui/TwoPaneLayout';
@@ -20,11 +21,6 @@ export default function ProfileScreen() {
 
   const handleLogout = () => {
     setLogoutModalVisible(true);
-  };
-
-  const getInitials = (name?: string) => {
-    if (!name) return 'U';
-    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
   };
 
   const logoutSection = (
@@ -45,9 +41,7 @@ export default function ProfileScreen() {
        <View style={wide && styles.rowWide}>
        <View style={wide && styles.leftWide}>
         <View style={[styles.header, wide && styles.headerWide]}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{getInitials(user?.name)}</Text>
-          </View>
+          <ProfileAvatar size={88} editable tone="light" />
           <Text style={styles.name}>{user?.name || 'Resident Name'}</Text>
           <Text style={styles.flat}>{user?.flatNumber || 'Flat B-204'} • {user?.tower || 'Tower B'}</Text>
           <View style={styles.badgeRow}>
@@ -189,9 +183,7 @@ function MenuItem({ icon, title, value, noBorder, onPress }: { icon: any, title:
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F3F4F6' },
   header: { backgroundColor: '#1B4FD8', paddingVertical: 40, alignItems: 'center', paddingBottom: 60 },
-  avatar: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
-  avatarText: { fontSize: 24, fontWeight: 'bold', color: '#1B4FD8' },
-  name: { fontSize: 20, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 4 },
+  name: { fontSize: 20, fontWeight: 'bold', color: '#FFFFFF', marginTop: 12, marginBottom: 4 },
   flat: { fontSize: 16, color: 'rgba(255,255,255,0.8)', marginBottom: 12 },
   badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   roleBadge: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 },

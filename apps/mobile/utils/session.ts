@@ -14,5 +14,6 @@ export function userFromApi(apiUser: any, fallbackEmail = ''): User {
     tower: apiUser.flat?.tower || (isResident ? 'Tower B' : undefined),
     societyCode: apiUser.society?.code || apiUser.societyId || 'ORC123',
     societyName: apiUser.society?.name,
+    avatarUrl: apiUser.avatarUrl || undefined,
   };
 }

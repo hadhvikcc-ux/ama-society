@@ -258,6 +258,16 @@ export class AuthService {
     }
   }
 
+  async updateAvatar(userId: string, avatar: string | null) {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: { avatarUrl: avatar },
+      include: SESSION_USER_INCLUDE,
+    });
+    const { passwordHash: _, ...safeUser } = user;
+    return safeUser;
+  }
+
   async getMe(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },

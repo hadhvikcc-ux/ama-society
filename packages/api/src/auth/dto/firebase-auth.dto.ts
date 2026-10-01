@@ -1,4 +1,4 @@
-import { IsJWT, IsNotEmpty, IsOptional, IsPhoneNumber, IsString, MaxLength } from 'class-validator';
+import { IsJWT, IsNotEmpty, IsOptional, IsPhoneNumber, IsString, Matches, MaxLength, ValidateIf } from 'class-validator';
 
 export class FirebaseLoginDto {
   @IsJWT()
@@ -22,4 +22,19 @@ export class CompleteRegistrationDto {
   @IsString()
   @IsNotEmpty()
   societyCode: string;
+}
+
+/** Max length of a profile picture data URL (~300 KB of image). The app sends ~20-40 KB. */
+export const AVATAR_MAX_LENGTH = 400_000;
+
+export class UpdateAvatarDto {
+  // A base64 data URL for a JPEG, PNG or WebP image, or null to remove the picture.
+  // SVG is not accepted: it can carry scripts.
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @MaxLength(AVATAR_MAX_LENGTH, { message: 'Profile picture is too large. Please choose a smaller photo.' })
+  @Matches(/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/, {
+    message: 'Profile picture must be a JPEG, PNG or WebP image.',
+  })
+  avatar: string | null;
 }

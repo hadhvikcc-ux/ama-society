@@ -8,7 +8,8 @@ import {
   Switch, 
   Platform, 
   Alert, 
-  RefreshControl 
+  RefreshControl,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -288,7 +289,11 @@ export default function ResidentHome() {
               accessibilityLabel="View Profile"
               accessibilityRole="button"
             >
-              <Ionicons name="person-outline" size={18} color="#475569" />
+              {user?.avatarUrl ? (
+                <Image source={{ uri: user.avatarUrl }} style={styles.headerAvatar} />
+              ) : (
+                <Ionicons name="person-outline" size={18} color="#475569" />
+              )}
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -693,6 +698,7 @@ function QuickActionPill({ icon, label, color, onPress }: QuickActionPillProps) 
 
 const styles = StyleSheet.create({
   homeRow: { flexDirection: 'row', alignItems: 'flex-start' },
+  headerAvatar: { width: 30, height: 30, borderRadius: 15 },
   homeLeft: { width: 420, flexShrink: 0 },
   homeRight: { flex: 1, minWidth: 0 },
   screen: {

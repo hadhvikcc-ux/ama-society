@@ -168,6 +168,8 @@ model User {
   societyId    String
   isActive     Boolean  @default(true)
   fcmToken     String?
+  // Profile picture as a small data URL (data:image/jpeg;base64,...), resized by the app to ~320px.
+  avatarUrl    String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
