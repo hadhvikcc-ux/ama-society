@@ -1,4 +1,4 @@
-import { IsEmail, IsEnum, IsNotEmpty, IsPhoneNumber, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsIn, IsNotEmpty, IsPhoneNumber, IsString, MinLength } from 'class-validator';
 
 export class RegisterDto {
   @IsString()
@@ -18,6 +18,7 @@ export class RegisterDto {
   @IsString()
   societyCode: string;
 
-  @IsEnum(['ADMIN', 'RESIDENT', 'RESIDENT_OWNER', 'RESIDENT_TENANT', 'GUARD', 'COMMITTEE', 'VENDOR', 'SUPPLIER'])
+  // Self-registration is limited to residents; staff and admin roles must be granted by an admin.
+  @IsIn(['RESIDENT', 'RESIDENT_OWNER', 'RESIDENT_TENANT'])
   role: string;
 }

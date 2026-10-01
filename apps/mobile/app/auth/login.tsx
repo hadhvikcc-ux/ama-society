@@ -231,11 +231,26 @@ export default function LoginScreen() {
           navigateToRole(normalizedRole);
           return;
         }
-      } catch {
-        // Backend API offline or error; fallback to verified accounts directory
+      } catch (err: any) {
+        // The server answered: never fall back to local accounts.
+        if (err?.response) {
+          const status = err.response.status;
+          setAuthError(
+            status === 400 || status === 401
+              ? 'Invalid email or password. Please verify your credentials.'
+              : `Sign-in is unavailable right now (server error ${status}). Please try again later.`
+          );
+          return;
+        }
+        // Backend unreachable; offline demo accounts below are for development builds only.
       }
 
-      // 2. Check verified demo accounts directory
+      if (!__DEV__) {
+        setAuthError('Unable to reach the server. Please check your connection and try again.');
+        return;
+      }
+
+      // 2. Check verified demo accounts directory (dev only, backend unreachable)
       const matchedAccount = VERIFIED_DEMO_ACCOUNTS.find(
         (acc) => acc.email.toLowerCase() === trimmedEmail.toLowerCase()
       );
@@ -322,8 +337,17 @@ export default function LoginScreen() {
           navigateToRole(res.data.user.role);
           return;
         }
-      } catch {
-        // Fallback to local session
+      } catch (err: any) {
+        if (err?.response) {
+          setAuthError('Invalid or expired OTP. Please try again.');
+          return;
+        }
+        // Backend unreachable; fall through to the dev-only local session below.
+      }
+
+      if (!__DEV__) {
+        setAuthError('Unable to sign in with OTP right now. Please use email and password.');
+        return;
       }
 
       setUser({
