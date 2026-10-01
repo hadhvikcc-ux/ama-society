@@ -11,7 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useBazaarStore, ProductItem } from '../../stores/bazaarStore';
 import { UniversalCameraView } from '../camera/UniversalCameraView';
-import { useBazaarWide } from './BazaarLayout';
+import { useWideLayout } from '../ui/TwoPaneLayout';
 
 interface BazaarScannersViewProps {
   onAddToCartSuccess?: (productName: string) => void;
@@ -178,7 +178,7 @@ export function BazaarScannersView({
   ];
 
   // Wide screens: scanner input on the left, the scan result on the right.
-  const wide = useBazaarWide();
+  const wide = useWideLayout();
   const left = wide ? styles.splitLeft : undefined;
   const right = wide ? styles.splitRight : undefined;
 

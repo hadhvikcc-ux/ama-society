@@ -15,7 +15,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenHeader } from '../../../components/ui/ScreenHeader';
 import { BazaarGroupHeader } from '../../../components/bazaar/BazaarGroupHeader';
-import { useBazaarWide } from '../../../components/bazaar/BazaarLayout';
+import { useWideLayout } from '../../../components/ui/TwoPaneLayout';
 import { Ionicons } from '@expo/vector-icons';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import {
@@ -444,7 +444,7 @@ export default function CombinedBazaarScreen({ initialMode, embedded = false }: 
   // Render
   // -------------------------------------------------------------
   // Wide screens: inputs in a left column, the bill / ticket in a right column.
-  const wide = useBazaarWide();
+  const wide = useWideLayout();
   const left = wide ? styles.splitLeft : undefined;
   const right = wide ? styles.splitRight : undefined;
 

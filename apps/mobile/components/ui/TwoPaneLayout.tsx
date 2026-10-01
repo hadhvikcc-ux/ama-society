@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { View, StyleSheet, useWindowDimensions, LayoutChangeEvent, ViewStyle, StyleProp } from 'react-native';
 
 /**
- * Shared two-pane layout for the Bazaar screens (Storefront, Cart & POS, Stock & Excel,
- * Khata Dues, Smart Scan): controls and filters in a left pane, content on the right.
+ * Shared two-pane layout for wide screens (Home, Community, My Pass, Profile and the Bazaar tabs):
+ * controls and summaries in a left pane, content on the right.
  * Below TWO_PANE_MIN_WIDTH everything stacks in a single column as before.
  */
 export const TWO_PANE_MIN_WIDTH = 900;
@@ -11,7 +11,7 @@ export const PAGE_MAX_WIDTH = 1440;
 export const SIDEBAR_WIDTH = 300;
 export const PANE_GAP = 16;
 
-export function useBazaarWide() {
+export function useWideLayout() {
   const { width } = useWindowDimensions();
   return width >= TWO_PANE_MIN_WIDTH;
 }

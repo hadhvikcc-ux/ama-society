@@ -16,7 +16,7 @@ import {
 import { useRouter } from 'expo-router';
 import { ScreenHeader } from '../../../components/ui/ScreenHeader';
 import { BazaarGroupHeader } from '../../../components/bazaar/BazaarGroupHeader';
-import { CardGrid, MainPane, PaneRow, SidePane, useBazaarWide } from '../../../components/bazaar/BazaarLayout';
+import { CardGrid, MainPane, PaneRow, SidePane, useWideLayout } from '../../../components/ui/TwoPaneLayout';
 import { Ionicons } from '@expo/vector-icons';
 import { MetricTrendCard, TrendBarChart, TrendAreaLineChart } from '../../../components/charts';
 import {
@@ -69,7 +69,7 @@ export default function InventoryScreen({ embedded = false }: { embedded?: boole
 
   // Active Main Tab: 'PRODUCTS' | 'ANALYTICS' | 'LOGS' | 'SUPPLIERS' | 'AUDIT'
   const [activeTab, setActiveTab] = useState<'PRODUCTS' | 'ANALYTICS' | 'LOGS' | 'SUPPLIERS' | 'AUDIT'>('PRODUCTS');
-  const wide = useBazaarWide();
+  const wide = useWideLayout();
   // On wide screens the left pane scrolls on its own; on phones it is part of the column.
   const SideScroll: React.ComponentType<any> = wide ? ScrollView : React.Fragment;
   const [inventoryChartType, setInventoryChartType] = useState<'area' | 'bar'>('bar');

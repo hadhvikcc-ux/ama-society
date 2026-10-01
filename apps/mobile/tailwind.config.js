@@ -3,6 +3,10 @@ module.exports = {
   darkMode: 'class',
   content: ["./app/**/*.{js,jsx,ts,tsx}", "./components/**/*.{js,jsx,ts,tsx}"],
   presets: [require("nativewind/preset")],
+  // Tailwind's base reset sets `[type="button"] { background-color: transparent }`. On web,
+  // React Native renders touchables as <button type="button">, and that rule loads after
+  // React Native's own styles, so it wiped the colour of every coloured button.
+  corePlugins: { preflight: false },
   theme: {
     extend: {
       colors: {
