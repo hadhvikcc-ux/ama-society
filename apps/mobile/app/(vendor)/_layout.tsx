@@ -8,6 +8,8 @@ import { isRoleAuthorizedForSegment, getAuthorizedHomeForRole } from '../../util
 
 export default function VendorLayout() {
   const { isAuthenticated, user } = useAuthStore();
+  // Hooks before the redirects below: React needs the same hooks on every render.
+  const [logoutModalVisible, setLogoutModalVisible] = useState(false);
 
   if (!isAuthenticated || !user) {
     return <Redirect href="/auth/login" />;
@@ -18,7 +20,6 @@ export default function VendorLayout() {
     return <Redirect href={target as any} />;
   }
 
-  const [logoutModalVisible, setLogoutModalVisible] = useState(false);
 
   return (
     <>

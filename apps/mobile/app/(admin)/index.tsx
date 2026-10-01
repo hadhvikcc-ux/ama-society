@@ -9,6 +9,7 @@ import { BentoGrid, BentoRow } from '../../components/ui/BentoGrid';
 import { BentoTile, BentoTileColor } from '../../components/ui/BentoTile';
 import { useResponsive } from '../../hooks/useResponsive';
 import { PendingApprovalsTile } from '../../components/admin/PendingApprovalsTile';
+import { RoleRequestsBanner } from '../../components/admin/RoleRequestsBanner';
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -54,6 +55,7 @@ export default function AdminDashboard() {
     { id: '2', title: 'Reminders', icon: 'mail', route: '/(admin)/billing' },
     { id: '3', title: 'Intercom', icon: 'call', route: '/directory' },
     { id: '4', title: 'Add Resident', icon: 'person-add', route: '/(admin)/society' },
+    { id: '4b', title: 'Member Roles', icon: 'people-circle', route: '/(admin)/members' },
     { id: '5', title: 'View Ledger', icon: 'bar-chart', route: '/(admin)/billing' },
     { id: '6', title: 'Broadcast', icon: 'megaphone', route: '/' },
     { id: '7', title: 'Export', icon: 'download', route: '/(admin)/reports' },
@@ -114,6 +116,7 @@ export default function AdminDashboard() {
             </BentoTile>
           </BentoRow>
 
+          <RoleRequestsBanner />
           <PendingApprovalsTile />
 
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: tileGap }}>

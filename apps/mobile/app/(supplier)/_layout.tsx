@@ -9,6 +9,9 @@ import { isRoleAuthorizedForSegment, getAuthorizedHomeForRole } from '../../util
 
 export default function SupplierLayout() {
   const { isAuthenticated, user } = useAuthStore();
+  // Hooks before the redirects below: React needs the same hooks on every render.
+  const [logoutModalVisible, setLogoutModalVisible] = useState(false);
+  const profile = useSupplierStore((state) => state.profile);
 
   if (!isAuthenticated || !user) {
     return <Redirect href="/auth/login" />;
@@ -19,8 +22,6 @@ export default function SupplierLayout() {
     return <Redirect href={target as any} />;
   }
 
-  const [logoutModalVisible, setLogoutModalVisible] = useState(false);
-  const profile = useSupplierStore((state) => state.profile);
 
   return (
     <>

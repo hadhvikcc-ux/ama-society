@@ -8,6 +8,8 @@ import { isRoleAuthorizedForSegment, getAuthorizedHomeForRole } from '../../util
 
 export default function AdminLayout() {
   const { isAuthenticated, user } = useAuthStore();
+  // Hooks before the redirects below: React needs the same hooks on every render.
+  const [logoutModalVisible, setLogoutModalVisible] = useState(false);
 
   if (!isAuthenticated || !user) {
     return <Redirect href="/auth/login" />;
@@ -18,7 +20,6 @@ export default function AdminLayout() {
     return <Redirect href={target as any} />;
   }
 
-  const [logoutModalVisible, setLogoutModalVisible] = useState(false);
 
   return (
     <>
@@ -47,6 +48,7 @@ export default function AdminLayout() {
         <Tabs.Screen name="society/index" options={{ title: 'Society', headerShown: false, tabBarIcon: ({ color, size }) => <Ionicons name="business" size={size} color={color} /> }} />
         <Tabs.Screen name="tickets/index" options={{ title: 'Tickets', headerShown: false, tabBarIcon: ({ color, size }) => <Ionicons name="construct" size={size} color={color} /> }} />
         <Tabs.Screen name="reports/index" options={{ title: 'Reports', headerShown: false, tabBarIcon: ({ color, size }) => <Ionicons name="bar-chart" size={size} color={color} /> }} />
+        <Tabs.Screen name="members" options={{ href: null, title: 'Member roles', headerShown: false }} />
       </Tabs>
 
       <LogoutConfirmModal

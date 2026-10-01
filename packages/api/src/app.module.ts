@@ -13,6 +13,7 @@ import { EventsModule } from './events/events.module';
 import { BazaarModule } from './bazaar/bazaar.module';
 import { ChatModule } from './chat/chat.module';
 import { TagsModule } from './tags/tags.module';
+import { MembersModule } from './members/members.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { TagsModule } from './tags/tags.module';
     BazaarModule,
     ChatModule,
     TagsModule,
+    MembersModule,
   ],
 })
 export class AppModule {}

@@ -44,7 +44,17 @@ async function main() {
   await user('admin@ama.com', 'Admin User', '1234567890', UserRole.ADMIN);
   await user('resident@ama.com', 'Resident User', '0987654321', UserRole.RESIDENT, flat1.id);
   await user('guard@ama.com', 'Gate Guard', '1122334455', UserRole.GUARD);
-  console.log(`✅ Users: admin@ama.com, resident@ama.com, guard@ama.com (password123 for new ones)`);
+  const secretary = await user('secretary@ama.com', 'Society Secretary', '1234500000', UserRole.ADMIN);
+  console.log(`✅ Users: admin@ama.com, secretary@ama.com, resident@ama.com, guard@ama.com (password123 for new ones)`);
+
+  // Committee offices: admin@ama.com is President (approves role changes), the second admin is Secretary.
+  if (!(await prisma.user.findFirst({ where: { societyId: society.id, committeePosition: 'PRESIDENT' } }))) {
+    await prisma.user.update({ where: { email: 'admin@ama.com' }, data: { committeePosition: 'PRESIDENT' } });
+  }
+  if (!secretary.committeePosition) {
+    await prisma.user.update({ where: { id: secretary.id }, data: { committeePosition: 'SECRETARY' } });
+  }
+  console.log(`✅ President: admin@ama.com • Secretary: secretary@ama.com`);
 
   // 4. Charge template
   if (!(await prisma.chargeTemplate.findFirst({ where: { societyId: society.id, name: 'Monthly Maintenance' } }))) {
