@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
+  useWindowDimensions,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +20,28 @@ import { BazaarScannersView } from '../../../components/bazaar/BazaarScannersVie
 import CombinedBazaarScreen from './cart';
 import InventoryScreen from './inventory';
 import OutstandingScreen from './outstanding';
+
+type Availability = 'ALL' | 'IN_STOCK' | 'FRESH';
+type SortOrder = 'POPULAR' | 'PRICE_ASC' | 'PRICE_DESC';
+
+const AVAILABILITY_OPTIONS: { key: Availability; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { key: 'ALL', label: 'Everything', icon: 'apps-outline' },
+  { key: 'IN_STOCK', label: 'In stock now', icon: 'checkmark-circle-outline' },
+  { key: 'FRESH', label: 'Fresh / loose', icon: 'leaf-outline' },
+];
+
+const SORT_OPTIONS: { key: SortOrder; label: string }[] = [
+  { key: 'POPULAR', label: 'Popular' },
+  { key: 'PRICE_ASC', label: 'Price: low to high' },
+  { key: 'PRICE_DESC', label: 'Price: high to low' },
+];
+
+/** Two-pane storefront (filters left, products right) from this width up. */
+const TWO_PANE_MIN_WIDTH = 900;
+const PAGE_MAX_WIDTH = 1440;
+const SIDEBAR_WIDTH = 280;
+const PANE_GAP = 16;
+const PRODUCT_TILE_MIN_WIDTH = 210;
 
 export default function BazaarHubScreen() {
   const router = useRouter();
@@ -46,6 +69,15 @@ export default function BazaarHubScreen() {
   // Storefront Specific States
   const [activeCat, setActiveCat] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [availability, setAvailability] = useState<Availability>('ALL');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('POPULAR');
+  const { width } = useWindowDimensions();
+  const twoPane = width >= TWO_PANE_MIN_WIDTH;
+  // Product pane width = page (capped, minus side padding) - sidebar - gap between panes.
+  const productPaneWidth = Math.min(width, PAGE_MAX_WIDTH) - 2 * PANE_GAP - SIDEBAR_WIDTH - PANE_GAP;
+  const gridColumns = twoPane
+    ? Math.max(2, Math.min(6, Math.floor((productPaneWidth + PANE_GAP) / (PRODUCT_TILE_MIN_WIDTH + PANE_GAP))))
+    : 2;
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -57,22 +89,50 @@ export default function BazaarHubScreen() {
     return cart.reduce((sum, item) => sum + item.quantity, 0);
   }, [cart]);
 
+  const cartTotal = useMemo(() => cart.reduce((sum, item) => sum + item.price * item.quantity, 0), [cart]);
+
   const categories = useMemo(() => {
     const cats = Array.from(new Set(products.map((p) => p.category)));
     return ['All', ...cats];
   }, [products]);
 
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = { All: 0 };
+    products.forEach((p) => {
+      if (!p.active) return;
+      counts.All += 1;
+      counts[p.category] = (counts[p.category] || 0) + 1;
+    });
+    return counts;
+  }, [products]);
+
   const filteredProducts = useMemo(() => {
-    return products.filter((p) => {
+    const query = searchQuery.trim().toLowerCase();
+    const list = products.filter((p) => {
       const matchCat = activeCat === 'All' || p.category === activeCat;
       const matchQuery =
-        !searchQuery.trim() ||
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (p.barcode && p.barcode.toLowerCase().includes(searchQuery.toLowerCase()));
-      return matchCat && matchQuery && p.active;
+        !query ||
+        p.name.toLowerCase().includes(query) ||
+        p.category.toLowerCase().includes(query) ||
+        (p.barcode && p.barcode.toLowerCase().includes(query));
+      const matchAvailability =
+        availability === 'ALL' ||
+        (availability === 'IN_STOCK' && (p.type === 'NON_STOCK' || p.stockQuantity > 0)) ||
+        (availability === 'FRESH' && p.type === 'NON_STOCK');
+      return matchCat && matchQuery && matchAvailability && p.active;
     });
-  }, [products, activeCat, searchQuery]);
+    if (sortOrder === 'PRICE_ASC') list.sort((a, b) => a.price - b.price);
+    if (sortOrder === 'PRICE_DESC') list.sort((a, b) => b.price - a.price);
+    return list;
+  }, [products, activeCat, searchQuery, availability, sortOrder]);
+
+  const filtersActive = activeCat !== 'All' || availability !== 'ALL' || sortOrder !== 'POPULAR' || searchQuery.length > 0;
+  const clearFilters = () => {
+    setActiveCat('All');
+    setAvailability('ALL');
+    setSortOrder('POPULAR');
+    setSearchQuery('');
+  };
 
   const handleAddToCart = (item: ProductItem) => {
     if (item.type === 'STOCK' && item.stockQuantity <= 0) {
@@ -83,12 +143,23 @@ export default function BazaarHubScreen() {
     showToast('✓ Added ' + item.name + ' to cart');
   };
 
+  // Pad the last row with invisible cells so every product tile keeps the same width.
+  const gridData = useMemo<(ProductItem | { id: string; spacer: true })[]>(() => {
+    const remainder = filteredProducts.length % gridColumns;
+    if (!twoPane || remainder === 0) return filteredProducts;
+    const spacers = Array.from({ length: gridColumns - remainder }, (_, i) => ({ id: `spacer-${i}`, spacer: true as const }));
+    return [...filteredProducts, ...spacers];
+  }, [filteredProducts, gridColumns, twoPane]);
+
+  const renderGridCell = ({ item }: { item: ProductItem | { id: string; spacer: true } }) =>
+    'spacer' in item ? <View style={styles.gridSpacer} /> : renderProduct({ item });
+
   const renderProduct = ({ item }: { item: ProductItem }) => {
     const isOut = item.type === 'STOCK' && item.stockQuantity === 0;
     const isLow = item.type === 'STOCK' && item.stockQuantity <= item.reorderLevel;
 
     return (
-      <View style={[styles.productCard, isOut && styles.productCardOut]}>
+      <View style={[styles.productCard, twoPane && styles.productCardWide, isOut && styles.productCardOut]}>
         <Text style={styles.productEmoji}>{item.emoji}</Text>
         <Text style={styles.productName} numberOfLines={2}>
           {item.name}
@@ -159,7 +230,131 @@ export default function BazaarHubScreen() {
       {/* ========================================================= */}
       {/* 2. GROUP VIEW: STORE CATALOG                              */}
       {/* ========================================================= */}
-      {activeGroupTab === 'STORE' && (
+      {activeGroupTab === 'STORE' && twoPane && (
+        <View style={styles.twoPane}>
+          {/* Left pane: search, filters and cart summary */}
+          <ScrollView style={styles.sidebar} contentContainerStyle={styles.sidebarContent} showsVerticalScrollIndicator={false}>
+            <View style={styles.sideTile}>
+              <View style={styles.searchBar}>
+                <Ionicons name="search" size={18} color="#9CA3AF" />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search groceries, dairy..."
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity onPress={() => setSearchQuery('')} accessibilityLabel="Clear search">
+                    <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+
+            <View style={[styles.sideTile, styles.cartTile]}>
+              <View style={styles.sideRowLeft}>
+                <Ionicons name="cart" size={20} color="#FFFFFF" />
+                <Text style={styles.cartTileTitle}>Your cart</Text>
+              </View>
+              <Text style={styles.cartTileTotal}>₹{cartTotal.toLocaleString('en-IN')}</Text>
+              <Text style={styles.cartTileSub}>
+                {totalCartCount > 0 ? `${totalCartCount} item${totalCartCount === 1 ? '' : 's'}` : 'Nothing added yet'}
+              </Text>
+              {totalCartCount > 0 && (
+                <TouchableOpacity onPress={() => setActiveGroupTab('POS_CART')} activeOpacity={0.85} accessibilityRole="button">
+                  <View style={styles.cartTileBtn}>
+                    <Text style={styles.cartTileBtnText}>View cart & pay</Text>
+                    <Ionicons name="arrow-forward" size={16} color="#1D4ED8" />
+                  </View>
+                </TouchableOpacity>
+              )}
+            </View>
+            <View style={styles.sideTile}>
+              <Text style={styles.sideTitle}>Categories</Text>
+              {categories.map((cat) => {
+                const active = activeCat === cat;
+                return (
+                  <TouchableOpacity key={cat} onPress={() => setActiveCat(cat)} activeOpacity={0.8} accessibilityRole="button" accessibilityState={{ selected: active }}>
+                    <View style={[styles.sideRow, active && styles.sideRowActive]}>
+                      <Text style={[styles.sideRowText, active && styles.sideRowTextActive]}>{cat}</Text>
+                      <View style={[styles.countPill, active && styles.countPillActive]}>
+                        <Text style={[styles.countText, active && styles.countTextActive]}>{categoryCounts[cat] || 0}</Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <View style={styles.sideTile}>
+              <Text style={styles.sideTitle}>Availability</Text>
+              {AVAILABILITY_OPTIONS.map((opt) => {
+                const active = availability === opt.key;
+                return (
+                  <TouchableOpacity key={opt.key} onPress={() => setAvailability(opt.key)} activeOpacity={0.8} accessibilityRole="button" accessibilityState={{ selected: active }}>
+                    <View style={[styles.sideRow, active && styles.sideRowActive]}>
+                      <View style={styles.sideRowLeft}>
+                        <Ionicons name={opt.icon} size={16} color={active ? '#1D4ED8' : '#64748B'} />
+                        <Text style={[styles.sideRowText, active && styles.sideRowTextActive]}>{opt.label}</Text>
+                      </View>
+                      {active && <Ionicons name="checkmark" size={16} color="#1D4ED8" />}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <View style={styles.sideTile}>
+              <Text style={styles.sideTitle}>Sort by</Text>
+              <View style={styles.sortWrap}>
+                {SORT_OPTIONS.map((opt) => {
+                  const active = sortOrder === opt.key;
+                  return (
+                    <TouchableOpacity key={opt.key} onPress={() => setSortOrder(opt.key)} activeOpacity={0.8}>
+                      <View style={[styles.sortChip, active && styles.sortChipActive]}>
+                        <Text style={[styles.sortChipText, active && styles.sortChipTextActive]}>{opt.label}</Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+          </ScrollView>
+
+          {/* Right pane: product grid */}
+          <View style={styles.mainPane}>
+            <View style={styles.resultsBar}>
+              <Text style={styles.resultsTitle}>
+                {activeCat === 'All' ? 'All products' : activeCat}
+                <Text style={styles.resultsCount}>  {filteredProducts.length} item{filteredProducts.length === 1 ? '' : 's'}</Text>
+              </Text>
+              {filtersActive && (
+                <TouchableOpacity onPress={clearFilters} accessibilityRole="button">
+                  <Text style={styles.clearText}>Clear filters</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            <FlatList
+              key={`grid-${gridColumns}`}
+              data={gridData}
+              keyExtractor={(item) => item.id}
+              renderItem={renderGridCell}
+              numColumns={gridColumns}
+              contentContainerStyle={styles.gridListWide}
+              columnWrapperStyle={{ gap: 16 }}
+              ListEmptyComponent={
+                <View style={styles.emptyWrap}>
+                  <Ionicons name="cart-outline" size={48} color="#CBD5E1" />
+                  <Text style={styles.emptyText}>No products match these filters</Text>
+                </View>
+              }
+            />
+          </View>
+        </View>
+      )}
+
+      {activeGroupTab === 'STORE' && !twoPane && (
         <View style={{ flex: 1 }}>
           {/* Header Search & Cart Shortcut */}
           <View style={styles.header}>
@@ -475,6 +670,18 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
     alignItems: 'center',
   },
+  productCardWide: {
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 16,
+  },
+  gridSpacer: {
+    // Same box as a product card so flex shares the row width evenly.
+    flex: 1,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
   productCardOut: {
     opacity: 0.6,
   },
@@ -574,6 +781,171 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#1D4ED8',
+  },
+  twoPane: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: PANE_GAP,
+    padding: PANE_GAP,
+    paddingBottom: 0,
+    width: '100%',
+    maxWidth: PAGE_MAX_WIDTH,
+    alignSelf: 'center',
+  },
+  sidebar: {
+    width: SIDEBAR_WIDTH,
+    flexGrow: 0,
+    flexShrink: 0,
+  },
+  sidebarContent: {
+    gap: 12,
+    paddingBottom: 24,
+  },
+  sideTile: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  sideTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#64748B',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  sideRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 9,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+  },
+  sideRowActive: {
+    backgroundColor: '#EEF2FF',
+  },
+  sideRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  sideRowText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#334155',
+  },
+  sideRowTextActive: {
+    color: '#1D4ED8',
+    fontWeight: '800',
+  },
+  countPill: {
+    minWidth: 26,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+  },
+  countPillActive: {
+    backgroundColor: '#1D4ED8',
+  },
+  countText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  countTextActive: {
+    color: '#FFFFFF',
+  },
+  sortWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  sortChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 14,
+    backgroundColor: '#F1F5F9',
+  },
+  sortChipActive: {
+    backgroundColor: '#1D4ED8',
+  },
+  sortChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  sortChipTextActive: {
+    color: '#FFFFFF',
+  },
+  cartTile: {
+    backgroundColor: '#1D4ED8',
+    borderColor: '#1D4ED8',
+    padding: 18,
+  },
+  cartTileTitle: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  cartTileTotal: {
+    color: '#FFFFFF',
+    fontSize: 28,
+    fontWeight: '800',
+    marginTop: 10,
+  },
+  cartTileSub: {
+    color: '#DBEAFE',
+    fontSize: 13,
+    marginBottom: 12,
+  },
+  cartTileBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    paddingVertical: 10,
+  },
+  cartTileBtnText: {
+    color: '#1D4ED8',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  mainPane: {
+    flex: 1,
+    minWidth: 0,
+  },
+  resultsBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+    paddingBottom: 12,
+  },
+  resultsTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  resultsCount: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  clearText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1D4ED8',
+  },
+  gridListWide: {
+    paddingBottom: 24,
   },
   emptyWrap: {
     alignItems: 'center',
