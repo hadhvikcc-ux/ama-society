@@ -58,7 +58,7 @@ gcloud run deploy ama-api --region=asia-south1 \
 
 With Neon/Upstash instead of Cloud SQL, drop the `--add-cloudsql-instances` line.
 
-The container runs `prisma migrate deploy` on start. Seed demo data once, if wanted, with `npx ts-node prisma/seed.ts` from `packages/api` against the same `DATABASE_URL`.
+The container runs `prisma migrate deploy` on start. Seed demo data once, if wanted, with `npx prisma db seed` from `packages/api` against the same `DATABASE_URL` (in PowerShell first: `$env:DATABASE_URL = (gcloud secrets versions access latest --secret=DATABASE_URL | Out-String).Trim()`). Run `pnpm install` from the repo root first; never `npm install` inside the workspace.
 
 Memorystore is only reachable through a VPC connector (`--vpc-connector`); Upstash or another public Redis avoids that.
 
