@@ -27,8 +27,11 @@ interface RoleRequest {
   toTenancy: string | null;
   reason: string | null;
   createdAt: string;
+  status?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  decidedAt?: string | null;
   user: { id: string; name: string };
   requestedBy: { id: string; name: string };
+  decidedBy?: { id: string; name: string } | null;
 }
 
 /** Same keys as MEMBER_ROLES in packages/api/src/members/member-roles.ts. */
@@ -62,6 +65,7 @@ export default function MemberRolesScreen() {
   const wide = useWideLayout();
   const [members, setMembers] = useState<Member[]>([]);
   const [requests, setRequests] = useState<RoleRequest[]>([]);
+  const [recent, setRecent] = useState<RoleRequest[]>([]);
   const [viewer, setViewer] = useState<{ id: string; isPresident: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -77,6 +81,7 @@ export default function MemberRolesScreen() {
       const res = await api.get('/members');
       setMembers(res.data.members);
       setRequests(res.data.pendingRequests);
+      setRecent(res.data.recentDecisions ?? []);
       setViewer(res.data.viewer);
       setLoadError(null);
     } catch (e: any) {
@@ -150,14 +155,22 @@ export default function MemberRolesScreen() {
   const requestsPanel = (
     <View style={styles.card}>
       <View style={styles.cardHead}>
-        <Ionicons name="hourglass" size={18} color="#B45309" />
-        <Text style={styles.cardTitle}>Waiting for the President</Text>
-        <View style={styles.countPill}>
-          <Text style={styles.countText}>{requests.length}</Text>
-        </View>
+        <Ionicons
+          name={requests.length ? 'hourglass' : 'checkmark-done-circle'}
+          size={18}
+          color={requests.length ? '#B45309' : '#15803D'}
+        />
+        <Text style={styles.cardTitle}>{viewer?.isPresident ? 'Needs your approval' : 'Waiting for the President'}</Text>
+        {requests.length > 0 && (
+          <View style={styles.countPill}>
+            <Text style={styles.countText}>{requests.length}</Text>
+          </View>
+        )}
       </View>
       {requests.length === 0 ? (
-        <Text style={styles.muted}>No role changes waiting.</Text>
+        <Text style={styles.muted}>
+          All caught up: no role changes are waiting{viewer?.isPresident ? ' for your approval' : ''}.
+        </Text>
       ) : (
         requests.map((r) => (
           <View key={r.id} style={styles.requestRow}>
@@ -193,6 +206,38 @@ export default function MemberRolesScreen() {
           </View>
         ))
       )}
+    </View>
+  );
+
+  const recentPanel = recent.length > 0 && (
+    <View style={styles.card}>
+      <View style={styles.cardHead}>
+        <Ionicons name="time-outline" size={18} color="#475569" />
+        <Text style={styles.cardTitle}>Recent decisions</Text>
+      </View>
+      {recent.map((r) => {
+        const approved = r.status === 'APPROVED';
+        return (
+          <View key={r.id} style={styles.requestRow}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name={approved ? 'checkmark-circle' : 'close-circle'} size={16} color={approved ? '#15803D' : '#B91C1C'} />
+              <Text style={styles.requestName}>{r.user.name}</Text>
+            </View>
+            <Text style={styles.requestChange}>
+              {roleLabel(r.fromRole, r.fromTenancy)} <Text style={{ color: '#9CA3AF' }}>→</Text>{' '}
+              <Text style={{ fontWeight: '800', color: approved ? '#15803D' : '#9CA3AF', textDecorationLine: approved ? 'none' : 'line-through' }}>
+                {roleLabel(r.toRole, r.toTenancy)}
+              </Text>
+            </Text>
+            <Text style={styles.requestMeta}>
+              {approved ? 'Approved' : 'Rejected'}
+              {r.decidedBy ? ` by ${r.decidedBy.name}` : ''}
+              {r.decidedAt ? ` · ${new Date(r.decidedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}` : ''}
+              {r.requestedBy && r.decidedBy && r.requestedBy.id !== r.decidedBy.id ? ` · asked by ${r.requestedBy.name}` : ''}
+            </Text>
+          </View>
+        );
+      })}
     </View>
   );
 
@@ -245,6 +290,7 @@ export default function MemberRolesScreen() {
           <PaneRow wide={wide} style={{ flex: 0 }}>
             <SidePane wide={wide} style={!wide && { gap: 12, marginBottom: 12 }}>
               {requestsPanel}
+              {recentPanel}
               {howItWorks}
             </SidePane>
 

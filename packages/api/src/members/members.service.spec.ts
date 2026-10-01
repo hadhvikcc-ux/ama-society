@@ -57,6 +57,16 @@ describe('role change requests', () => {
     await expect(setup({ admin: ADMIN, m1: MEMBER }, { id: 'open' }).service.requestRoleChange('admin', 's1', 'm1', 'GUARD')).rejects.toBeInstanceOf(ConflictException);
   });
 
+  it('lists members with pending requests and the last five decisions', async () => {
+    const { service, prisma } = setup({ pres: PRESIDENT });
+    const res: any = await service.listMembers('pres', 's1');
+    expect(res.viewer).toEqual({ id: 'pres', isPresident: true });
+    expect(res).toHaveProperty('recentDecisions');
+    const recentQuery = prisma.roleChangeRequest.findMany.mock.calls[1][0];
+    expect(recentQuery.where).toEqual({ societyId: 's1', status: { in: ['APPROVED', 'REJECTED'] } });
+    expect(recentQuery.take).toBe(5);
+  });
+
   it('refuses callers without a society', async () => {
     await expect(setup({ admin: ADMIN }).service.listMembers('admin', undefined as any)).rejects.toBeInstanceOf(ForbiddenException);
   });

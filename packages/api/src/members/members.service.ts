@@ -54,7 +54,7 @@ export class MembersService {
   async listMembers(actorId: string, societyId: string) {
     const actor = await this.actor(actorId, societyId);
     this.assertCanManage(actor);
-    const [members, pending] = await Promise.all([
+    const [members, pending, recent] = await Promise.all([
       this.prisma.user.findMany({
         where: { societyId, approvalStatus: 'APPROVED', isActive: true },
         select: MEMBER_SELECT,
@@ -65,8 +65,20 @@ export class MembersService {
         include: REQUEST_INCLUDE,
         orderBy: { createdAt: 'asc' },
       }),
+      // The last few approved / rejected changes, so admins can see what happened.
+      this.prisma.roleChangeRequest.findMany({
+        where: { societyId, status: { in: ['APPROVED', 'REJECTED'] } },
+        include: REQUEST_INCLUDE,
+        orderBy: { decidedAt: 'desc' },
+        take: 5,
+      }),
     ]);
-    return { members, pendingRequests: pending, viewer: { id: actor.id, isPresident: this.isPresident(actor) } };
+    return {
+      members,
+      pendingRequests: pending,
+      recentDecisions: recent,
+      viewer: { id: actor.id, isPresident: this.isPresident(actor) },
+    };
   }
 
   async requestRoleChange(actorId: string, societyId: string, userId: string, roleKey: MemberRoleKey, reason?: string) {
