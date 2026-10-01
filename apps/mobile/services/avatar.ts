@@ -43,31 +43,63 @@ async function squareJpegOnWeb(src: string): Promise<string> {
 }
 
 /**
+ * Browser file chooser that also settles when the dialog is closed without a choice.
+ * (expo-image-picker's web picker only listens for 'change', so cancelling left it
+ * waiting forever and the avatar spinner never stopped.)
+ */
+function chooseImageFileOnWeb(): Promise<File | null> {
+  return new Promise((resolve) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/jpeg,image/png,image/webp';
+    input.style.display = 'none';
+    let settled = false;
+    const finish = (file: File | null) => {
+      if (settled) return;
+      settled = true;
+      input.remove();
+      resolve(file);
+    };
+    input.addEventListener('change', () => finish(input.files?.[0] ?? null));
+    input.addEventListener('cancel', () => finish(null));
+    document.body.appendChild(input);
+    input.click();
+  });
+}
+
+/**
  * Lets the user choose a photo and returns it as a small square JPEG data URL,
  * or null if they cancelled.
  */
 export async function pickAvatarImage(): Promise<string | null> {
-  if (Platform.OS !== 'web') {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      throw new Error('Allow photo access in Settings to choose a profile picture.');
+  if (Platform.OS === 'web') {
+    const file = await chooseImageFileOnWeb();
+    if (!file) return null;
+    if (!file.type.startsWith('image/')) throw new Error('Please choose a JPEG, PNG or WebP image.');
+    const objectUrl = URL.createObjectURL(file);
+    try {
+      return await squareJpegOnWeb(objectUrl);
+    } finally {
+      URL.revokeObjectURL(objectUrl);
     }
+  }
+
+  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (!permission.granted) {
+    throw new Error('Allow photo access in Settings to choose a profile picture.');
   }
 
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ImagePicker.MediaTypeOptions.Images,
     allowsEditing: true,
     aspect: [1, 1],
-    quality: Platform.OS === 'web' ? 1 : 0.5,
-    base64: Platform.OS !== 'web',
+    quality: 0.5,
+    base64: true,
   });
   if (result.canceled || !result.assets?.length) return null;
 
   const asset = result.assets[0];
-  const dataUrl =
-    Platform.OS === 'web'
-      ? await squareJpegOnWeb(asset.uri)
-      : `data:${asset.mimeType === 'image/png' ? 'image/png' : 'image/jpeg'};base64,${asset.base64}`;
+  const dataUrl = `data:${asset.mimeType === 'image/png' ? 'image/png' : 'image/jpeg'};base64,${asset.base64}`;
 
   if (dataUrl.length > MAX_DATA_URL_LENGTH) {
     throw new Error('That photo is too large. Please choose a smaller one.');
@@ -81,9 +113,12 @@ export async function pickAvatarImage(): Promise<string | null> {
  */
 export async function saveAvatar(avatar: string | null): Promise<void> {
   try {
-    const res = await api.patch('/auth/me/avatar', { avatar });
+    const res = await api.patch('/auth/me/avatar', { avatar }, { timeout: 30_000 });
     useAuthStore.getState().updateUser({ avatarUrl: res.data?.avatarUrl ?? undefined });
   } catch (error: any) {
+    if (error?.code === 'ECONNABORTED') {
+      throw new Error('The upload timed out. Check your connection and try again.');
+    }
     const message = error?.response?.data?.message;
     throw new Error(
       Array.isArray(message) ? message[0] : message || 'Could not save your profile picture. Please try again.',

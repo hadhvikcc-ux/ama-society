@@ -39,13 +39,23 @@ export function ProfileAvatar({ size = 72, editable = false, tone = 'dark' }: Pr
     }
   };
 
-  const changePhoto = () =>
-    run(async () => {
-      const image = await pickAvatarImage();
-      if (!image) return null; // cancelled
-      await saveAvatar(image);
+  const changePhoto = async () => {
+    setStatus(null);
+    // Choose first, outside the busy state: the spinner covers only the upload,
+    // so closing the picker without a choice never leaves it spinning.
+    let image: string | null;
+    try {
+      image = await pickAvatarImage();
+    } catch (e: any) {
+      setStatus({ kind: 'error', text: e?.message || 'That photo could not be used.' });
+      return;
+    }
+    if (!image) return; // cancelled
+    await run(async () => {
+      await saveAvatar(image as string);
       return 'Profile picture updated';
     });
+  };
 
   const removePhoto = () =>
     run(async () => {
