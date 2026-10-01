@@ -16,6 +16,7 @@ import {
 import { useRouter } from 'expo-router';
 import { ScreenHeader } from '../../../components/ui/ScreenHeader';
 import { BazaarGroupHeader } from '../../../components/bazaar/BazaarGroupHeader';
+import { CardGrid, MainPane, PaneRow, SidePane, useBazaarWide } from '../../../components/bazaar/BazaarLayout';
 import { Ionicons } from '@expo/vector-icons';
 import { MetricTrendCard, TrendBarChart, TrendAreaLineChart } from '../../../components/charts';
 import {
@@ -68,6 +69,9 @@ export default function InventoryScreen({ embedded = false }: { embedded?: boole
 
   // Active Main Tab: 'PRODUCTS' | 'ANALYTICS' | 'LOGS' | 'SUPPLIERS' | 'AUDIT'
   const [activeTab, setActiveTab] = useState<'PRODUCTS' | 'ANALYTICS' | 'LOGS' | 'SUPPLIERS' | 'AUDIT'>('PRODUCTS');
+  const wide = useBazaarWide();
+  // On wide screens the left pane scrolls on its own; on phones it is part of the column.
+  const SideScroll: React.ComponentType<any> = wide ? ScrollView : React.Fragment;
   const [inventoryChartType, setInventoryChartType] = useState<'area' | 'bar'>('bar');
 
   // Filter & Search State for Products
@@ -608,6 +612,63 @@ export default function InventoryScreen({ embedded = false }: { embedded?: boole
   // -------------------------------------------------------------
   // Render
   // -------------------------------------------------------------
+  // Section tabs: a horizontal strip on phones, a vertical menu in the left pane on wide screens.
+  const tabBarEl = (
+      <View style={[styles.tabBar, wide && styles.sideTile]}>
+        <ScrollView horizontal={!wide} showsHorizontalScrollIndicator={false} contentContainerStyle={wide ? { gap: 6 } : { paddingHorizontal: 16, gap: 8 }}>
+          <TouchableOpacity
+            style={[styles.mainTab, wide && styles.mainTabWide, activeTab === 'PRODUCTS' && styles.mainTabActive]}
+            onPress={() => setActiveTab('PRODUCTS')}
+          >
+            <Ionicons name="cube-outline" size={16} color={activeTab === 'PRODUCTS' ? '#FFFFFF' : '#475569'} />
+            <Text style={[styles.mainTabText, activeTab === 'PRODUCTS' && styles.mainTabTextActive]}>
+              Products ({totalProducts})
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.mainTab, wide && styles.mainTabWide, activeTab === 'ANALYTICS' && styles.mainTabActive]}
+            onPress={() => setActiveTab('ANALYTICS')}
+          >
+            <Ionicons name="bar-chart-outline" size={16} color={activeTab === 'ANALYTICS' ? '#FFFFFF' : '#475569'} />
+            <Text style={[styles.mainTabText, activeTab === 'ANALYTICS' && styles.mainTabTextActive]}>
+              Valuation & ABC
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.mainTab, wide && styles.mainTabWide, activeTab === 'LOGS' && styles.mainTabActive]}
+            onPress={() => setActiveTab('LOGS')}
+          >
+            <Ionicons name="document-text-outline" size={16} color={activeTab === 'LOGS' ? '#FFFFFF' : '#475569'} />
+            <Text style={[styles.mainTabText, activeTab === 'LOGS' && styles.mainTabTextActive]}>
+              Audit Ledger ({stockMovements.length})
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.mainTab, wide && styles.mainTabWide, activeTab === 'SUPPLIERS' && styles.mainTabActive]}
+            onPress={() => setActiveTab('SUPPLIERS')}
+          >
+            <Ionicons name="bus-outline" size={16} color={activeTab === 'SUPPLIERS' ? '#FFFFFF' : '#475569'} />
+            <Text style={[styles.mainTabText, activeTab === 'SUPPLIERS' && styles.mainTabTextActive]}>
+              Suppliers & POs ({purchaseOrders.length})
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.mainTab, wide && styles.mainTabWide, activeTab === 'AUDIT' && styles.mainTabActive]}
+            onPress={() => setActiveTab('AUDIT')}
+          >
+            <Ionicons name="checkbox-outline" size={16} color={activeTab === 'AUDIT' ? '#FFFFFF' : '#475569'} />
+            <Text style={[styles.mainTabText, activeTab === 'AUDIT' && styles.mainTabTextActive]}>
+              Physical Stock Take
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+  );
+
   return (
     <View style={styles.container}>
       {/* Hidden Web File Input for Excel/CSV Upload */}
@@ -648,8 +709,13 @@ export default function InventoryScreen({ embedded = false }: { embedded?: boole
         </View>
       )}
 
+      <PaneRow wide={wide} style={wide && styles.paneRowWide}>
+      <SidePane wide={wide}>
+      <SideScroll {...(wide ? { contentContainerStyle: { gap: 12, paddingBottom: 24 }, showsVerticalScrollIndicator: false } : {})}>
+      {wide && tabBarEl}
+
       {/* Excel / Bulk Stock Operations Banner */}
-      <View style={styles.excelOperationsStrip}>
+      <View style={[styles.excelOperationsStrip, wide && styles.sideTile, wide && styles.excelStripWide]}>
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <Ionicons name="document-attach" size={16} color="#059669" />
@@ -688,8 +754,8 @@ export default function InventoryScreen({ embedded = false }: { embedded?: boole
       </View>
 
       {/* Executive 5-Card Inventory KPI Strip */}
-      <View style={styles.kpiContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 10 }}>
+      <View style={[styles.kpiContainer, wide && styles.kpiContainerWide]}>
+        <ScrollView horizontal={!wide} showsHorizontalScrollIndicator={false} contentContainerStyle={wide ? styles.kpiGridWide : { paddingHorizontal: 16, gap: 10 }}>
           {/* Card 1: Catalog Size */}
           <View style={styles.kpiCard}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -756,62 +822,12 @@ export default function InventoryScreen({ embedded = false }: { embedded?: boole
         </ScrollView>
       </View>
 
-      {/* Primary Functional Tabs */}
-      <View style={styles.tabBar}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
-          <TouchableOpacity
-            style={[styles.mainTab, activeTab === 'PRODUCTS' && styles.mainTabActive]}
-            onPress={() => setActiveTab('PRODUCTS')}
-          >
-            <Ionicons name="cube-outline" size={16} color={activeTab === 'PRODUCTS' ? '#FFFFFF' : '#475569'} />
-            <Text style={[styles.mainTabText, activeTab === 'PRODUCTS' && styles.mainTabTextActive]}>
-              Products ({totalProducts})
-            </Text>
-          </TouchableOpacity>
+      {!wide && tabBarEl}
+      </SideScroll>
+      </SidePane>
 
-          <TouchableOpacity
-            style={[styles.mainTab, activeTab === 'ANALYTICS' && styles.mainTabActive]}
-            onPress={() => setActiveTab('ANALYTICS')}
-          >
-            <Ionicons name="bar-chart-outline" size={16} color={activeTab === 'ANALYTICS' ? '#FFFFFF' : '#475569'} />
-            <Text style={[styles.mainTabText, activeTab === 'ANALYTICS' && styles.mainTabTextActive]}>
-              Valuation & ABC
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.mainTab, activeTab === 'LOGS' && styles.mainTabActive]}
-            onPress={() => setActiveTab('LOGS')}
-          >
-            <Ionicons name="document-text-outline" size={16} color={activeTab === 'LOGS' ? '#FFFFFF' : '#475569'} />
-            <Text style={[styles.mainTabText, activeTab === 'LOGS' && styles.mainTabTextActive]}>
-              Audit Ledger ({stockMovements.length})
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.mainTab, activeTab === 'SUPPLIERS' && styles.mainTabActive]}
-            onPress={() => setActiveTab('SUPPLIERS')}
-          >
-            <Ionicons name="bus-outline" size={16} color={activeTab === 'SUPPLIERS' ? '#FFFFFF' : '#475569'} />
-            <Text style={[styles.mainTabText, activeTab === 'SUPPLIERS' && styles.mainTabTextActive]}>
-              Suppliers & POs ({purchaseOrders.length})
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.mainTab, activeTab === 'AUDIT' && styles.mainTabActive]}
-            onPress={() => setActiveTab('AUDIT')}
-          >
-            <Ionicons name="checkbox-outline" size={16} color={activeTab === 'AUDIT' ? '#FFFFFF' : '#475569'} />
-            <Text style={[styles.mainTabText, activeTab === 'AUDIT' && styles.mainTabTextActive]}>
-              Physical Stock Take
-            </Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </View>
-
-      <ScrollView style={styles.scrollArea} contentContainerStyle={styles.scrollContent}>
+      <MainPane wide={wide}>
+      <ScrollView style={styles.scrollArea} contentContainerStyle={[styles.scrollContent, wide && styles.scrollContentWide]}>
         {/* ========================================================= */}
         {/* TAB 1: PRODUCTS & CATALOG                                */}
         {/* ========================================================= */}
@@ -878,6 +894,7 @@ export default function InventoryScreen({ embedded = false }: { embedded?: boole
             </ScrollView>
 
             {/* Product Cards List */}
+            <CardGrid enabled={wide} minItemWidth={420}>
             {filteredProducts.map((p) => {
               const isLow = p.type === 'STOCK' && p.stockQuantity <= p.reorderLevel;
               const isOut = p.type === 'STOCK' && p.stockQuantity === 0;
@@ -1008,6 +1025,7 @@ export default function InventoryScreen({ embedded = false }: { embedded?: boole
                 </View>
               );
             })}
+            </CardGrid>
           </View>
         )}
 
@@ -1438,6 +1456,8 @@ export default function InventoryScreen({ embedded = false }: { embedded?: boole
           </View>
         )}
       </ScrollView>
+      </MainPane>
+      </PaneRow>
 
       {/* ========================================================= */}
       {/* MODAL 0: EXCEL / CSV BULK STOCK UPLOAD & RECONCILIATION   */}
@@ -2202,6 +2222,7 @@ const styles = StyleSheet.create({
   },
   excelButtonsRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 6,
     alignItems: 'center',
   },
@@ -2313,6 +2334,36 @@ const styles = StyleSheet.create({
   mainTabActive: {
     backgroundColor: '#2563EB',
   },
+  mainTabWide: {
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    borderRadius: 14,
+    backgroundColor: 'transparent',
+  },
+  paneRowWide: { padding: 16, paddingBottom: 0 },
+  sideTile: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 12,
+  },
+  excelStripWide: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#BBF7D0',
+    padding: 16,
+  },
+  kpiContainerWide: {
+    backgroundColor: 'transparent',
+    paddingVertical: 0,
+    borderBottomWidth: 0,
+  },
+  kpiGridWide: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  scrollContentWide: { padding: 0, paddingBottom: 24 },
   mainTabText: {
     fontSize: 12,
     fontWeight: '700',
