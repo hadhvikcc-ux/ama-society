@@ -15,6 +15,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenHeader } from '../../../components/ui/ScreenHeader';
 import { BazaarGroupHeader } from '../../../components/bazaar/BazaarGroupHeader';
+import { useWideLayout } from '../../../components/ui/TwoPaneLayout';
 import { Ionicons } from '@expo/vector-icons';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import {
@@ -442,6 +443,11 @@ export default function CombinedBazaarScreen({ initialMode, embedded = false }: 
   // -------------------------------------------------------------
   // Render
   // -------------------------------------------------------------
+  // Wide screens: inputs in a left column, the bill / ticket in a right column.
+  const wide = useWideLayout();
+  const left = wide ? styles.splitLeft : undefined;
+  const right = wide ? styles.splitRight : undefined;
+
   return (
     <View style={styles.container}>
       {!embedded && (
@@ -503,12 +509,13 @@ export default function CombinedBazaarScreen({ initialMode, embedded = false }: 
         </View>
       </View>
 
-      <ScrollView style={styles.scrollArea} contentContainerStyle={styles.scrollContent}>
+      <ScrollView style={styles.scrollArea} contentContainerStyle={[styles.scrollContent, wide && styles.scrollContentWide]}>
         {/* ========================================================= */}
         {/* RESIDENT CART MODE CONTENT                                */}
         {/* ========================================================= */}
         {activeMode === 'cart' && (
-          <View>
+          <View style={wide ? styles.splitRow : undefined}>
+           <View style={left}>
             {/* Fulfillment Selector */}
             <View style={styles.sectionCard}>
               <Text style={styles.sectionCardTitle}>Fulfillment Method</Text>
@@ -624,6 +631,8 @@ export default function CombinedBazaarScreen({ initialMode, embedded = false }: 
               </View>
             </View>
 
+           </View>
+           <View style={right}>
             {/* Cart Line Items */}
             <View style={styles.sectionCard}>
               <View style={styles.cardHeaderRow}>
@@ -925,6 +934,7 @@ export default function CombinedBazaarScreen({ initialMode, embedded = false }: 
                 </View>
               </TouchableOpacity>
             )}
+           </View>
           </View>
         )}
 
@@ -932,7 +942,8 @@ export default function CombinedBazaarScreen({ initialMode, embedded = false }: 
         {/* CASHIER POS COUNTER MODE CONTENT                         */}
         {/* ========================================================= */}
         {activeMode === 'pos' && (
-          <View>
+          <View style={wide ? styles.splitRow : undefined}>
+           <View style={left}>
             {/* Customer Flat Selector */}
             <View style={styles.sectionCard}>
               <View style={styles.cardHeaderRow}>
@@ -1091,6 +1102,8 @@ export default function CombinedBazaarScreen({ initialMode, embedded = false }: 
               )}
             </View>
 
+           </View>
+           <View style={right}>
             {/* POS Ticket Table (Line Items) */}
             <View style={styles.sectionCard}>
               <View style={styles.cardHeaderRow}>
@@ -1336,6 +1349,7 @@ export default function CombinedBazaarScreen({ initialMode, embedded = false }: 
                 </TouchableOpacity>
               )}
             </View>
+           </View>
           </View>
         )}
       </ScrollView>
@@ -1764,6 +1778,10 @@ export default function CombinedBazaarScreen({ initialMode, embedded = false }: 
 }
 
 const styles = StyleSheet.create({
+  splitRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 16 },
+  splitLeft: { width: 420, flexShrink: 0 },
+  splitRight: { flex: 1, minWidth: 0 },
+  scrollContentWide: { width: '100%', maxWidth: 1440, alignSelf: 'center' },
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',

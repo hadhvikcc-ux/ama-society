@@ -1,4 +1,5 @@
 import { IsEmail, IsIn, IsNotEmpty, IsPhoneNumber, IsString, MinLength } from 'class-validator';
+import { SIGNUP_ROLE_VALUES } from '../signup-roles';
 
 export class RegisterDto {
   @IsString()
@@ -18,7 +19,7 @@ export class RegisterDto {
   @IsString()
   societyCode: string;
 
-  // Self-registration is limited to residents; staff and admin roles must be granted by an admin.
-  @IsIn(['RESIDENT', 'RESIDENT_OWNER', 'RESIDENT_TENANT'])
+  // Residents are active at once; staff roles wait for admin approval. ADMIN is not allowed.
+  @IsIn(SIGNUP_ROLE_VALUES)
   role: string;
 }

@@ -1,0 +1,12 @@
+# Keep the Cloud Build upload small: the Dockerfile installs dependencies itself.
+.git
+.gitignore
+node_modules/
+dist/
+.env
+.env.*
+.cert/
+*.pem
+.expo/
+.turbo/
+apps/mobile/

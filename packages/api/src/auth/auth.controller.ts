@@ -1,10 +1,13 @@
-import { Controller, Post, Body, Get, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, Get, Patch, Param, ParseUUIDPipe, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto, OtpRequestDto, OtpVerifyDto, RefreshTokenDto } from './dto/login.dto';
+import { CompleteRegistrationDto, FirebaseLoginDto, UpdateAvatarDto } from './dto/firebase-auth.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
 
 @Controller('auth')
 @ApiTags('auth')
@@ -20,6 +23,18 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
+  }
+
+  // Google sign-in or phone OTP (Firebase Authentication ID token).
+  @Post('firebase')
+  @HttpCode(HttpStatus.OK)
+  async firebaseLogin(@Body() dto: FirebaseLoginDto) {
+    return this.authService.firebaseLogin(dto.idToken);
+  }
+
+  @Post('register/complete')
+  async completeRegistration(@Body() dto: CompleteRegistrationDto) {
+    return this.authService.completeRegistration(dto);
   }
 
   @Post('otp/send')
@@ -47,5 +62,40 @@ export class AuthController {
   @ApiBearerAuth()
   async getMe(@CurrentUser() user: any) {
     return this.authService.getMe(user.id);
+  }
+
+  // Staff sign-ups (guard, committee, vendor, supplier) waiting for an admin in the same society.
+  @Get('approvals')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  async listApprovals(@CurrentUser() admin: any) {
+    return this.authService.listPendingApprovals(admin.societyId);
+  }
+
+  @Post('approvals/:id/approve')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  async approve(@CurrentUser() admin: any, @Param('id', ParseUUIDPipe) id: string) {
+    return this.authService.decideApproval(admin.societyId, id, true);
+  }
+
+  @Post('approvals/:id/reject')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  async reject(@CurrentUser() admin: any, @Param('id', ParseUUIDPipe) id: string) {
+    return this.authService.decideApproval(admin.societyId, id, false);
+  }
+
+  // Set or remove (avatar: null) the signed-in user's profile picture.
+  @Patch('me/avatar')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  async updateAvatar(@CurrentUser() user: any, @Body() dto: UpdateAvatarDto) {
+    return this.authService.updateAvatar(user.id, dto.avatar);
   }
 }

@@ -1,0 +1,6 @@
+# Builds the API image from the repo root and pushes it to Artifact Registry.
+#   gcloud builds submit --config cloudbuild.yaml .
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args: [build, -f, packages/api/Dockerfile, -t, asia-south1-docker.pkg.dev/$PROJECT_ID/ama/ama-api, .]
+images: [asia-south1-docker.pkg.dev/$PROJECT_ID/ama/ama-api]

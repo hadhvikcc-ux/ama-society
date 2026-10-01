@@ -6,6 +6,7 @@ import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { Ionicons } from '@expo/vector-icons';
 import { UpiPaymentScannerModal } from '../../../components/payment/UpiPaymentScannerModal';
 import { LegalPolicyModal } from '../../../components/legal/LegalPolicyModal';
+import { MainPane, PaneRow, SidePane, useWideLayout } from '../../../components/ui/TwoPaneLayout';
 import { MetricTrendCard, TrendBarChart, TrendAreaLineChart } from '../../../components/charts';
 import { usePaymentStore, PaymentRecord } from '../../../stores/paymentStore';
 import { useAuthStore } from '../../../stores/authStore';
@@ -42,6 +43,11 @@ const mockInvoices = [
 
 export default function BillingScreen() {
   const [tab, setTab] = useState<'invoices' | 'ledger' | 'audit'>('invoices');
+  // Wide screens: dues summary, sections and policy link on the left; invoices / ledger in two columns on the right.
+  const wide = useWideLayout();
+  const gridProps = wide
+    ? { numColumns: 2, columnWrapperStyle: { marginHorizontal: -7 } }
+    : { numColumns: 1 };
   const [auditFeedback, setAuditFeedback] = useState<string | null>(null);
   const router = useRouter();
   const { user } = useAuthStore();
@@ -141,11 +147,26 @@ export default function BillingScreen() {
     </View>
   );
 
+  // Payment Policy & Guidelines Footnote (bottom bar on phones, a tile in the left pane on wide screens)
+  const policyFootnote = (
+      <TouchableOpacity
+        style={[styles.policyFootnote, wide && styles.policyFootnoteWide]}
+        onPress={() => setLegalModalVisible(true)}
+      >
+        <Ionicons name="shield-checkmark" size={14} color="#1E40AF" style={{ marginRight: 6 }} />
+        <Text style={styles.policyFootnoteText}>
+          View Payment Guidelines, Invoicing Cycles & Dispute Policy &rarr;
+        </Text>
+      </TouchableOpacity>
+  );
+
   return (
     <View style={styles.container}>
       <ScreenHeader title="Billing & Payments" />
       
-      <View style={styles.headerCardWrapper}>
+      <PaneRow wide={wide} style={wide && styles.paneRowWide}>
+      <SidePane wide={wide}>
+      <View style={[styles.headerCardWrapper, wide && styles.unpadded]}>
         <View style={styles.headerCard}>
           <Text style={styles.ledgerTitle}>Society Dues & Payments</Text>
           <View style={styles.ledgerRow}>
@@ -180,28 +201,34 @@ export default function BillingScreen() {
         </View>
       </View>
 
-      <View style={styles.tabs}>
-        <TouchableOpacity style={[styles.tab, tab === 'invoices' && styles.activeTab]} onPress={() => setTab('invoices')}>
+      <View style={[styles.tabs, wide && styles.tabsWide]}>
+        <TouchableOpacity style={[styles.tab, wide && styles.tabWide, tab === 'invoices' && (wide ? styles.activeTabWide : styles.activeTab)]} onPress={() => setTab('invoices')}>
           <Text style={[styles.tabText, tab === 'invoices' && styles.activeTabText]}>Invoices (3)</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.tab, tab === 'ledger' && styles.activeTab]} onPress={() => setTab('ledger')}>
+        <TouchableOpacity style={[styles.tab, wide && styles.tabWide, tab === 'ledger' && (wide ? styles.activeTabWide : styles.activeTab)]} onPress={() => setTab('ledger')}>
           <Text style={[styles.tabText, tab === 'ledger' && styles.activeTabText]}>
             UPI & Ledger ({records.length})
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.tab, tab === 'audit' && styles.activeTab]} onPress={() => setTab('audit')}>
+        <TouchableOpacity style={[styles.tab, wide && styles.tabWide, tab === 'audit' && (wide ? styles.activeTabWide : styles.activeTab)]} onPress={() => setTab('audit')}>
           <Text style={[styles.tabText, tab === 'audit' && styles.activeTabText]}>
             Audit Report 📊
           </Text>
         </TouchableOpacity>
       </View>
 
+      {wide && policyFootnote}
+      </SidePane>
+
+      <MainPane wide={wide}>
       {tab === 'invoices' ? (
         <FlatList
           data={mockInvoices}
           keyExtractor={item => item.id}
-          renderItem={renderInvoice}
-          contentContainerStyle={styles.list}
+          renderItem={(info) => <View style={wide && styles.gridCell}>{renderInvoice(info)}</View>}
+          key={wide ? 'grid-2' : 'grid-1'}
+          {...gridProps}
+          contentContainerStyle={[styles.list, wide && styles.unpadded]}
           ListHeaderComponent={() => (
             <MetricTrendCard
               title="My 6-Month Maintenance & Dues History"
@@ -247,11 +274,13 @@ export default function BillingScreen() {
         <FlatList
           data={records}
           keyExtractor={item => item.id}
-          renderItem={renderLedger}
-          contentContainerStyle={styles.list}
+          renderItem={(info) => <View style={wide && styles.gridCell}>{renderLedger(info)}</View>}
+          key={wide ? 'grid-2' : 'grid-1'}
+          {...gridProps}
+          contentContainerStyle={[styles.list, wide && styles.unpadded]}
         />
       ) : (
-        <ScrollView contentContainerStyle={styles.list}>
+        <ScrollView contentContainerStyle={[styles.list, wide && styles.unpadded]}>
           {/* Audit Report Summary Card */}
           <View style={styles.auditSummaryCard}>
             <View style={styles.auditCardHeader}>
@@ -353,17 +382,10 @@ export default function BillingScreen() {
           </View>
         </ScrollView>
       )}
+      </MainPane>
+      </PaneRow>
 
-      {/* Payment Policy & Guidelines Footnote */}
-      <TouchableOpacity
-        style={styles.policyFootnote}
-        onPress={() => setLegalModalVisible(true)}
-      >
-        <Ionicons name="shield-checkmark" size={14} color="#1E40AF" style={{ marginRight: 6 }} />
-        <Text style={styles.policyFootnoteText}>
-          View Payment Guidelines, Invoicing Cycles & Dispute Policy &rarr;
-        </Text>
-      </TouchableOpacity>
+      {!wide && policyFootnote}
 
       {/* Global UPI Payment Scanner Modal */}
       <UpiPaymentScannerModal
@@ -436,6 +458,22 @@ const styles = StyleSheet.create({
   tabText: { fontSize: 14, fontWeight: '600', color: '#64748B' },
   activeTabText: { color: '#1E40AF', fontWeight: '800' },
   list: { padding: 16 },
+  paneRowWide: { padding: 16, paddingBottom: 0 },
+  unpadded: { padding: 0, paddingBottom: 24 },
+  tabsWide: {
+    flexDirection: 'column',
+    padding: 8,
+    gap: 4,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderBottomWidth: 1,
+  },
+  tabWide: { flexGrow: 0, flexBasis: 'auto', alignItems: 'flex-start', paddingVertical: 12, paddingHorizontal: 14, borderRadius: 14 },
+  activeTabWide: { backgroundColor: '#EFF6FF' },
+  policyFootnoteWide: { borderRadius: 16, borderWidth: 1, borderColor: '#BFDBFE', justifyContent: 'flex-start' },
+  // Half width each, gap from padding, so an odd last card keeps the same width as the rest.
+  gridCell: { width: '50%', paddingHorizontal: 7 },
 
   card: {
     backgroundColor: '#FFFFFF',

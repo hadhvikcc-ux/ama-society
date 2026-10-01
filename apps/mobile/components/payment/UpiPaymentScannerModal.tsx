@@ -665,14 +665,14 @@ export function UpiPaymentScannerModal({
                     style={styles.simChip}
                     onPress={() =>
                       handleScanSampleQr(
-                        'upi://pay?pa=ama.society@icici&pn=AMA%20Resident%20Welfare%20Association&am=4500.00&cu=INR&tn=Society%20Maintenance%20Bill'
+                        'upi://pay?pa=8754401071@ybl&pn=AMA%20Resident%20Welfare%20Association&am=4500.00&cu=INR&tn=Society%20Maintenance%20Bill'
                       )
                     }
                   >
                     <Ionicons name="business" size={16} color="#1D4ED8" style={{ marginRight: 6 }} />
                     <View style={{ flex: 1 }}>
                       <Text style={styles.simChipTitle}>Society Maintenance Fee</Text>
-                      <Text style={styles.simChipSub}>₹4,500 • ama.society@icici</Text>
+                      <Text style={styles.simChipSub}>₹4,500 • 8754401071@ybl</Text>
                     </View>
                     <Text style={styles.simScanTag}>Simulate</Text>
                   </TouchableOpacity>

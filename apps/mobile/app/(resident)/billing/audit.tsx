@@ -11,6 +11,8 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenHeader } from '../../../components/ui/ScreenHeader';
+import { BentoRow } from '../../../components/ui/BentoGrid';
+import { useResponsive } from '../../../hooks/useResponsive';
 import {
   AUDIT_REPORTS_BY_YEAR,
   downloadAuditReportPdf,
@@ -23,6 +25,7 @@ import {
 
 export default function YearlyMaintenanceAuditScreen() {
   const router = useRouter();
+  const { isPhone } = useResponsive();
   const [selectedYear, setSelectedYear] = useState<string>('FY 2025-26');
   const [activeTab, setActiveTab] = useState<'FINANCIAL' | 'OPERATIONS' | 'STATUTORY'>('FINANCIAL');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -82,7 +85,8 @@ export default function YearlyMaintenanceAuditScreen() {
       )}
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
+       <View style={styles.page}>
+        <BentoRow weights={[3, 2]}>
         {/* Top Header Card */}
         <View style={styles.societyHeroCard}>
           <View style={styles.heroTopRow}>
@@ -115,6 +119,7 @@ export default function YearlyMaintenanceAuditScreen() {
           </View>
         </View>
 
+        <View style={styles.sideColumn}>
         {/* Fiscal Year Picker Bar */}
         <View style={styles.yearPickerCard}>
           <Text style={styles.yearPickerLabel}>Select Financial Year:</Text>
@@ -207,10 +212,16 @@ export default function YearlyMaintenanceAuditScreen() {
           </TouchableOpacity>
         </View>
 
+        </View>
+        </BentoRow>
+
         {/* Executive KPI Grid */}
         <View style={styles.kpiGrid}>
           {/* Total Collections */}
-          <View style={[styles.kpiCard, { borderLeftColor: '#15803D' }]}>
+          <View style={[styles.kpiCard, { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0', flexBasis: isPhone ? '45%' : '22%' }]}>
+            <View style={styles.kpiIcon}>
+              <Ionicons name="trending-up" size={18} color="#15803D" />
+            </View>
             <Text style={styles.kpiLabel}>Total Collections</Text>
             <Text style={[styles.kpiValue, { color: '#15803D' }]}>{formatInr(auditData.summary.totalIncome)}</Text>
             <Text style={styles.kpiSub}>
@@ -219,21 +230,30 @@ export default function YearlyMaintenanceAuditScreen() {
           </View>
 
           {/* Total Expenses */}
-          <View style={[styles.kpiCard, { borderLeftColor: '#DC2626' }]}>
+          <View style={[styles.kpiCard, { backgroundColor: '#FFF1F2', borderColor: '#FECDD3', flexBasis: isPhone ? '45%' : '22%' }]}>
+            <View style={styles.kpiIcon}>
+              <Ionicons name="trending-down" size={18} color="#DC2626" />
+            </View>
             <Text style={styles.kpiLabel}>Maintenance Outflows</Text>
             <Text style={[styles.kpiValue, { color: '#DC2626' }]}>{formatInr(auditData.summary.totalExpenses)}</Text>
             <Text style={styles.kpiSub}>Audited vendor AMC & bills</Text>
           </View>
 
           {/* Net Surplus */}
-          <View style={[styles.kpiCard, { borderLeftColor: '#2563EB' }]}>
+          <View style={[styles.kpiCard, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE', flexBasis: isPhone ? '45%' : '22%' }]}>
+            <View style={styles.kpiIcon}>
+              <Ionicons name="stats-chart" size={18} color="#2563EB" />
+            </View>
             <Text style={styles.kpiLabel}>Net Operating Surplus</Text>
             <Text style={[styles.kpiValue, { color: '#2563EB' }]}>+{formatInr(auditData.summary.netSurplus)}</Text>
             <Text style={styles.kpiSub}>To General Society Reserve</Text>
           </View>
 
           {/* Sinking Fund Reserve */}
-          <View style={[styles.kpiCard, { borderLeftColor: '#7C3AED' }]}>
+          <View style={[styles.kpiCard, { backgroundColor: '#F5F3FF', borderColor: '#DDD6FE', flexBasis: isPhone ? '45%' : '22%' }]}>
+            <View style={styles.kpiIcon}>
+              <Ionicons name="shield" size={18} color="#7C3AED" />
+            </View>
             <Text style={styles.kpiLabel}>Sinking Fund Balance</Text>
             <Text style={[styles.kpiValue, { color: '#7C3AED' }]}>{formatInr(auditData.summary.sinkingFundReserve)}</Text>
             <Text style={styles.kpiSub}>In Auto-Sweep Fixed Deposits</Text>
@@ -468,7 +488,7 @@ export default function YearlyMaintenanceAuditScreen() {
           </View>
         )}
 
-        <View style={{ height: 40 }} />
+       </View>
       </ScrollView>
 
       {/* Executive Summary Preview & WhatsApp Modal */}
@@ -554,6 +574,25 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 40,
   },
+  page: {
+    width: '100%',
+    maxWidth: 1200,
+    alignSelf: 'center',
+    gap: 16,
+  },
+  sideColumn: {
+    flexGrow: 1,
+    gap: 16,
+  },
+  kpiIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
   toastBox: {
     position: 'absolute',
     top: 54,
@@ -579,12 +618,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   societyHeroCard: {
+    flexGrow: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 18,
+    borderRadius: 24,
+    padding: 22,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-    marginBottom: 14,
+    borderColor: '#E2E8F0',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -663,11 +702,10 @@ const styles = StyleSheet.create({
   },
   yearPickerCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 14,
+    borderRadius: 24,
+    padding: 18,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    marginBottom: 14,
   },
   yearPickerLabel: {
     fontSize: 12,
@@ -679,6 +717,7 @@ const styles = StyleSheet.create({
   },
   yearButtonsRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 10,
   },
   yearBtn: {
@@ -705,10 +744,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   downloadBarCard: {
+    flexGrow: 1,
     backgroundColor: '#0F172A',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
+    borderRadius: 24,
+    padding: 18,
   },
   downloadBarTitle: {
     color: '#FFFFFF',
@@ -718,10 +757,12 @@ const styles = StyleSheet.create({
   },
   downloadButtonsGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
   },
   exportBtn: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: 130,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
@@ -740,18 +781,13 @@ const styles = StyleSheet.create({
   kpiGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
-    marginBottom: 16,
+    gap: 16,
   },
   kpiCard: {
-    flex: 1,
-    minWidth: '47%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 12,
+    flexGrow: 1,
+    borderRadius: 24,
+    padding: 18,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderLeftWidth: 4,
   },
   kpiLabel: {
     fontSize: 11,
@@ -761,7 +797,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   kpiValue: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: '800',
     marginVertical: 4,
   },
@@ -772,22 +808,21 @@ const styles = StyleSheet.create({
   sectionTabs: {
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 4,
+    borderRadius: 20,
+    padding: 6,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    marginBottom: 16,
   },
   sectionTab: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: 8,
+    paddingVertical: 12,
+    borderRadius: 14,
   },
   sectionTabActive: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#EEF2FF',
   },
   sectionTabText: {
     fontSize: 12,
@@ -803,8 +838,8 @@ const styles = StyleSheet.create({
   },
   tableCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 16,
+    borderRadius: 24,
+    padding: 20,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },

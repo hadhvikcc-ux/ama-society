@@ -15,6 +15,7 @@ import {
 import { useRouter } from 'expo-router';
 import { ScreenHeader } from '../../../components/ui/ScreenHeader';
 import { BazaarGroupHeader } from '../../../components/bazaar/BazaarGroupHeader';
+import { CardGrid, MainPane, PaneRow, SidePane, useWideLayout } from '../../../components/ui/TwoPaneLayout';
 import { Ionicons } from '@expo/vector-icons';
 import { MetricTrendCard, TrendBarChart, TrendAreaLineChart } from '../../../components/charts';
 import {
@@ -55,6 +56,7 @@ export default function OutstandingScreen({ embedded = false }: { embedded?: boo
   } = useBazaarStore();
 
   const [activeTab, setActiveTab] = useState<'GOODS' | 'ORDERS' | 'KHATA'>('GOODS');
+  const wide = useWideLayout();
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [khataChartType, setKhataChartType] = useState<'area' | 'bar'>('bar');
 
@@ -308,10 +310,12 @@ export default function OutstandingScreen({ embedded = false }: { embedded?: boo
         </View>
       )}
 
-      {/* 3 Overview Metric Cards */}
-      <View style={styles.metricsStrip}>
+      <PaneRow wide={wide} style={wide && styles.paneRowWide}>
+      <SidePane wide={wide}>
+      {/* 3 Overview Metric Cards (the section switcher in the left pane on wide screens) */}
+      <View style={[styles.metricsStrip, wide && styles.metricsStripWide]}>
         <TouchableOpacity
-          style={[styles.metricCard, activeTab === 'GOODS' && styles.metricCardActive]}
+          style={[styles.metricCard, wide && styles.metricCardWide, activeTab === 'GOODS' && styles.metricCardActive]}
           onPress={() => setActiveTab('GOODS')}
           activeOpacity={0.8}
         >
@@ -328,7 +332,7 @@ export default function OutstandingScreen({ embedded = false }: { embedded?: boo
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.metricCard, activeTab === 'ORDERS' && styles.metricCardActive]}
+          style={[styles.metricCard, wide && styles.metricCardWide, activeTab === 'ORDERS' && styles.metricCardActive]}
           onPress={() => setActiveTab('ORDERS')}
           activeOpacity={0.8}
         >
@@ -345,7 +349,7 @@ export default function OutstandingScreen({ embedded = false }: { embedded?: boo
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.metricCard, activeTab === 'KHATA' && styles.metricCardActive]}
+          style={[styles.metricCard, wide && styles.metricCardWide, activeTab === 'KHATA' && styles.metricCardActive]}
           onPress={() => setActiveTab('KHATA')}
           activeOpacity={0.8}
         >
@@ -362,7 +366,8 @@ export default function OutstandingScreen({ embedded = false }: { embedded?: boo
         </TouchableOpacity>
       </View>
 
-      {/* Tab Selector Switcher */}
+      {/* Tab Selector Switcher (phones only; the metric cards switch sections on wide screens) */}
+      {!wide && (
       <View style={styles.tabsNav}>
         <TouchableOpacity
           style={[styles.tabNavBtn, activeTab === 'GOODS' && styles.tabNavBtnActive]}
@@ -409,8 +414,11 @@ export default function OutstandingScreen({ embedded = false }: { embedded?: boo
           </Text>
         </TouchableOpacity>
       </View>
+      )}
+      </SidePane>
 
-      <ScrollView contentContainerStyle={styles.contentScroll} showsVerticalScrollIndicator={false}>
+      <MainPane wide={wide}>
+      <ScrollView contentContainerStyle={[styles.contentScroll, wide && styles.contentScrollWide]} showsVerticalScrollIndicator={false}>
         {/* TAB 1: OUTSTANDING GOODS & STOCK NEEDS */}
         {activeTab === 'GOODS' && (
           <View>
@@ -437,7 +445,8 @@ export default function OutstandingScreen({ embedded = false }: { embedded?: boo
                 <Text style={styles.emptySub}>No items are currently below minimum reorder levels.</Text>
               </View>
             ) : (
-              outstandingGoods.map((item) => (
+              <CardGrid enabled={wide} minItemWidth={440}>
+              {outstandingGoods.map((item) => (
                 <View key={item.id} style={styles.goodsCard}>
                   <View style={styles.goodsTopRow}>
                     <Text style={styles.goodsEmoji}>{item.emoji}</Text>
@@ -516,7 +525,8 @@ export default function OutstandingScreen({ embedded = false }: { embedded?: boo
                     </TouchableOpacity>
                   </View>
                 </View>
-              ))
+              ))}
+              </CardGrid>
             )}
           </View>
         )}
@@ -540,7 +550,8 @@ export default function OutstandingScreen({ embedded = false }: { embedded?: boo
                 <Text style={styles.emptySub}>All resident orders have been fulfilled and delivered.</Text>
               </View>
             ) : (
-              outstandingOrders.map((ord) => (
+              <CardGrid enabled={wide} minItemWidth={440}>
+              {outstandingOrders.map((ord) => (
                 <View key={ord.id} style={styles.orderCard}>
                   <View style={styles.orderHeader}>
                     <View>
@@ -720,7 +731,8 @@ export default function OutstandingScreen({ embedded = false }: { embedded?: boo
                     )}
                   </View>
                 </View>
-              ))
+              ))}
+              </CardGrid>
             )}
           </View>
         )}
@@ -784,7 +796,8 @@ export default function OutstandingScreen({ embedded = false }: { embedded?: boo
                 <Text style={styles.emptySub}>No flats have outstanding grocery debts or pending dues.</Text>
               </View>
             ) : (
-              outstandingKhata.map((acc) => (
+              <CardGrid enabled={wide} minItemWidth={440}>
+              {outstandingKhata.map((acc) => (
                 <View key={acc.flatNumber} style={styles.khataCard}>
                   <View style={styles.khataHeader}>
                     <View>
@@ -869,13 +882,16 @@ export default function OutstandingScreen({ embedded = false }: { embedded?: boo
                     </TouchableOpacity>
                   </View>
                 </View>
-              ))
+              ))}
+              </CardGrid>
             )}
           </View>
         )}
 
         <View style={{ height: 40 }} />
       </ScrollView>
+      </MainPane>
+      </PaneRow>
 
       {/* Settle Khata Payment Modal */}
       <Modal visible={settleModalVisible} transparent animationType="slide">
@@ -1044,6 +1060,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   metricCardActive: { borderColor: '#1D4ED8', backgroundColor: '#EFF6FF' },
+  paneRowWide: { padding: 16, paddingBottom: 0 },
+  metricsStripWide: {
+    flexDirection: 'column',
+    padding: 0,
+    gap: 12,
+    backgroundColor: 'transparent',
+    borderBottomWidth: 0,
+  },
+  metricCardWide: {
+    flexGrow: 0,
+    flexBasis: 'auto',
+    alignItems: 'flex-start',
+    padding: 18,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+  },
+  contentScrollWide: { padding: 0, paddingBottom: 24 },
   metricIconWrap: { marginBottom: 2 },
   metricVal: { fontSize: 17, fontWeight: '900', color: '#0F172A' },
   metricLabel: { fontSize: 10, fontWeight: '700', color: '#64748B', textTransform: 'uppercase' },

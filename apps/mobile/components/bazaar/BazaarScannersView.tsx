@@ -11,6 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useBazaarStore, ProductItem } from '../../stores/bazaarStore';
 import { UniversalCameraView } from '../camera/UniversalCameraView';
+import { useWideLayout } from '../ui/TwoPaneLayout';
 
 interface BazaarScannersViewProps {
   onAddToCartSuccess?: (productName: string) => void;
@@ -176,8 +177,21 @@ export function BazaarScannersView({
     { label: '🍞 Whole Wheat Bread', code: '8902001004128' },
   ];
 
+  // Wide screens: scanner input on the left, the scan result on the right.
+  const wide = useWideLayout();
+  const left = wide ? styles.splitLeft : undefined;
+  const right = wide ? styles.splitRight : undefined;
+
+  const resultPlaceholder = (icon: keyof typeof Ionicons.glyphMap, title: string, sub: string) => (
+    <View style={styles.resultPlaceholder}>
+      <Ionicons name={icon} size={40} color="#CBD5E1" />
+      <Text style={styles.resultPlaceholderTitle}>{title}</Text>
+      <Text style={styles.resultPlaceholderSub}>{sub}</Text>
+    </View>
+  );
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.container} contentContainerStyle={[styles.content, wide && styles.contentWide]}>
       {/* Toast */}
       {toastMessage && (
         <View style={styles.toastBox}>
@@ -241,7 +255,8 @@ export function BazaarScannersView({
       {/* MODE 1: BARCODE SCANNER                                   */}
       {/* ========================================================= */}
       {activeScannerMode === 'BARCODE' && (
-        <View>
+        <View style={wide ? styles.splitRow : undefined}>
+         <View style={left}>
           {/* Live Camera Viewfinder Card */}
           <View style={styles.viewfinderCard}>
             <View style={styles.cameraViewfinderBox}>
@@ -307,6 +322,10 @@ export function BazaarScannersView({
             </View>
           </View>
 
+         </View>
+         <View style={right}>
+          {wide && !matchedProduct && !barcodeNotFound &&
+            resultPlaceholder('barcode-outline', 'Scan or type a barcode', 'The matching product and an Add to Cart button appear here.')}
           {/* Scanned Result Card */}
           {matchedProduct && (
             <View style={styles.resultCard}>
@@ -389,6 +408,7 @@ export function BazaarScannersView({
               </View>
             </View>
           )}
+         </View>
         </View>
       )}
 
@@ -396,7 +416,8 @@ export function BazaarScannersView({
       {/* MODE 2: OCR GROCERY LIST DIGITIZER                        */}
       {/* ========================================================= */}
       {activeScannerMode === 'OCR' && (
-        <View>
+        <View style={wide ? styles.splitRow : undefined}>
+         <View style={left}>
           <View style={styles.ocrPromptCard}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Ionicons name="sparkles" size={20} color="#7C3AED" />
@@ -433,6 +454,10 @@ export function BazaarScannersView({
             </View>
           </View>
 
+         </View>
+         <View style={right}>
+          {wide && !ocrProcessing && ocrItems.length === 0 &&
+            resultPlaceholder('document-text-outline', 'Pick a grocery list to scan', 'Recognised products from the list appear here, ready to add to the cart.')}
           {ocrProcessing && (
             <View style={styles.processingCard}>
               <Ionicons name="sync" size={28} color="#7C3AED" />
@@ -509,6 +534,7 @@ export function BazaarScannersView({
               })}
             </View>
           )}
+         </View>
         </View>
       )}
     </ScrollView>
@@ -524,6 +550,23 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 40,
   },
+  contentWide: { width: '100%', maxWidth: 1440, alignSelf: 'center' },
+  splitRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 16 },
+  splitLeft: { width: 460, flexShrink: 0 },
+  splitRight: { flex: 1, minWidth: 0 },
+  resultPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    padding: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#CBD5E1',
+    backgroundColor: '#FFFFFF',
+  },
+  resultPlaceholderTitle: { fontSize: 16, fontWeight: '800', color: '#334155' },
+  resultPlaceholderSub: { fontSize: 13, color: '#64748B', textAlign: 'center' },
   toastBox: {
     flexDirection: 'row',
     alignItems: 'center',

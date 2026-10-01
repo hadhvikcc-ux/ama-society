@@ -4,8 +4,10 @@ import { useAuthStore } from '../../stores/authStore';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { EditProfileModal } from '../../components/profile/EditProfileModal';
+import { ProfileAvatar } from '../../components/profile/ProfileAvatar';
 import { LegalPolicyModal } from '../../components/legal/LegalPolicyModal';
 import { LogoutConfirmModal } from '../../components/ui/LogoutConfirmModal';
+import { CardGrid, PAGE_MAX_WIDTH, useWideLayout } from '../../components/ui/TwoPaneLayout';
 
 export default function ProfileScreen() {
   const { user, logout } = useAuthStore();
@@ -14,23 +16,32 @@ export default function ProfileScreen() {
   const [legalModalVisible, setLegalModalVisible] = useState(false);
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
   const [legalSection, setLegalSection] = useState<'PRIVACY' | 'PAYMENT' | 'TERMS' | 'SECURITY'>('PRIVACY');
+  // Wide screens: profile card and logout on the left, settings sections in a grid on the right.
+  const wide = useWideLayout();
 
   const handleLogout = () => {
     setLogoutModalVisible(true);
   };
 
-  const getInitials = (name?: string) => {
-    if (!name) return 'U';
-    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-  };
+  const logoutSection = (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Danger Zone</Text>
+          <View style={styles.card}>
+            <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+              <Ionicons name="log-out-outline" size={24} color="#DC2626" />
+              <Text style={styles.logoutText}>Logout</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F3F4F6' }}>
-      <ScrollView style={styles.container}>
-        <View style={styles.header}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{getInitials(user?.name)}</Text>
-          </View>
+      <ScrollView style={styles.container} contentContainerStyle={wide && styles.pageWide}>
+       <View style={wide && styles.rowWide}>
+       <View style={wide && styles.leftWide}>
+        <View style={[styles.header, wide && styles.headerWide]}>
+          <ProfileAvatar size={88} editable tone="light" />
           <Text style={styles.name}>{user?.name || 'Resident Name'}</Text>
           <Text style={styles.flat}>{user?.flatNumber || 'Flat B-204'} • {user?.tower || 'Tower B'}</Text>
           <View style={styles.badgeRow}>
@@ -46,8 +57,11 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
         </View>
+        {wide && logoutSection}
+       </View>
 
-        <View style={styles.content}>
+        <View style={[styles.content, wide && styles.contentWide]}>
+        <CardGrid enabled={wide} minItemWidth={360}>
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Account</Text>
             <View style={styles.card}>
@@ -123,15 +137,9 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Danger Zone</Text>
-          <View style={styles.card}>
-            <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-              <Ionicons name="log-out-outline" size={24} color="#DC2626" />
-              <Text style={styles.logoutText}>Logout</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        {!wide && logoutSection}
+      </CardGrid>
+      </View>
       </View>
       </ScrollView>
 
@@ -175,9 +183,7 @@ function MenuItem({ icon, title, value, noBorder, onPress }: { icon: any, title:
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F3F4F6' },
   header: { backgroundColor: '#1B4FD8', paddingVertical: 40, alignItems: 'center', paddingBottom: 60 },
-  avatar: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
-  avatarText: { fontSize: 24, fontWeight: 'bold', color: '#1B4FD8' },
-  name: { fontSize: 20, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 4 },
+  name: { fontSize: 20, fontWeight: 'bold', color: '#FFFFFF', marginTop: 12, marginBottom: 4 },
   flat: { fontSize: 16, color: 'rgba(255,255,255,0.8)', marginBottom: 12 },
   badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   roleBadge: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 },
@@ -185,6 +191,11 @@ const styles = StyleSheet.create({
   editHeaderBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.25)', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)' },
   editHeaderText: { color: '#FFFFFF', fontSize: 12, fontWeight: 'bold' },
   content: { marginTop: -20, paddingHorizontal: 16, paddingBottom: 40 },
+  pageWide: { width: '100%', maxWidth: PAGE_MAX_WIDTH, alignSelf: 'center', padding: 16 },
+  rowWide: { flexDirection: 'row', alignItems: 'flex-start', gap: 16 },
+  leftWide: { width: 340, flexShrink: 0 },
+  headerWide: { borderRadius: 24, paddingVertical: 32, paddingBottom: 32, marginBottom: 24 },
+  contentWide: { flex: 1, minWidth: 0, marginTop: 0, paddingHorizontal: 0 },
   section: { marginBottom: 24 },
   sectionTitle: { fontSize: 14, fontWeight: '600', color: '#6B7280', marginLeft: 8, marginBottom: 8, textTransform: 'uppercase' },
   card: { backgroundColor: '#FFFFFF', borderRadius: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2, overflow: 'hidden' },

@@ -1,3 +1,9 @@
 @tailwind base;
+
+/* The one part of Tailwind's reset the `border` utility needs (preflight is off, see tailwind.config.js). */
+*, ::before, ::after {
+  border-width: 0;
+  border-style: solid;
+}
 @tailwind components;
 @tailwind utilities;

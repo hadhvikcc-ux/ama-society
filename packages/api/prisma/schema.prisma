@@ -17,6 +17,26 @@ enum UserRole {
   SUPPLIER
 }
 
+// Office held on the managing committee. The PRESIDENT approves role changes.
+enum CommitteePosition {
+  PRESIDENT
+  SECRETARY
+  TREASURER
+  MEMBER
+}
+
+enum RoleChangeStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum TenancyType {
   OWNER
   TENANT
@@ -130,6 +150,8 @@ enum FacilityPricingTier {
 // Models
 model Society {
   id              String   @id @default(uuid())
+  // Short code residents type when signing up, e.g. AMA-001 (always upper case).
+  code            String   @unique
   name            String
   address         String
   city            String
@@ -152,6 +174,7 @@ model Society {
   GatePassToken   GatePassToken[]
   ServiceTicket   ServiceTicket[]
   FacilityBooking FacilityBooking[]
+  roleChangeRequests RoleChangeRequest[]
   Product         Product[]
   Order           Order[]
 }
@@ -166,6 +189,13 @@ model User {
   societyId    String
   isActive     Boolean  @default(true)
   fcmToken     String?
+  // Profile picture as a small data URL (data:image/jpeg;base64,...), resized by the app to ~320px.
+  avatarUrl    String?
+  // Owner or tenant, for residents (set from the sign-up role).
+  tenancyType  TenancyType?
+  // Staff roles picked at sign-up stay PENDING until a society admin approves them.
+  approvalStatus ApprovalStatus @default(APPROVED)
+  committeePosition CommitteePosition?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -184,6 +214,33 @@ model User {
   claimedItems       PoolBudgetItem[]
   buyerOrders        Order[]          @relation("BuyerOrders")
   vendorOrders       Order[]          @relation("VendorOrders")
+  roleRequestsFor     RoleChangeRequest[] @relation("RoleRequestTarget")
+  roleRequestsMade    RoleChangeRequest[] @relation("RoleRequestRequester")
+  roleRequestsDecided RoleChangeRequest[] @relation("RoleRequestDecider")
+}
+
+// An admin proposes a member's new role; it takes effect when the President approves.
+model RoleChangeRequest {
+  id            String           @id @default(uuid())
+  societyId     String
+  userId        String
+  fromRole      UserRole
+  fromTenancy   TenancyType?
+  toRole        UserRole
+  toTenancy     TenancyType?
+  reason        String?
+  status        RoleChangeStatus @default(PENDING)
+  requestedById String
+  decidedById   String?
+  createdAt     DateTime         @default(now())
+  decidedAt     DateTime?
+
+  society     Society @relation(fields: [societyId], references: [id])
+  user        User    @relation("RoleRequestTarget", fields: [userId], references: [id], onDelete: Cascade)
+  requestedBy User    @relation("RoleRequestRequester", fields: [requestedById], references: [id])
+  decidedBy   User?   @relation("RoleRequestDecider", fields: [decidedById], references: [id])
+
+  @@index([societyId, status])
 }
 
 

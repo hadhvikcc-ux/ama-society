@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../stores/authStore';
 import { EditProfileModal } from '../../components/profile/EditProfileModal';
 import { LegalPolicyModal } from '../../components/legal/LegalPolicyModal';
+import { CardGrid, MainPane, PaneRow, SidePane, useWideLayout } from '../../components/ui/TwoPaneLayout';
 import {
   useVisitorPassStore,
   VisitorPass,
@@ -37,6 +38,8 @@ export default function PassScreen() {
 
   // Active Tab: 'RESIDENT' or 'VISITOR'
   const [activeTab, setActiveTab] = useState<'RESIDENT' | 'VISITOR'>('RESIDENT');
+  // Wide screens: pass type, actions and filters in a left pane; the pass or pass list on the right.
+  const wide = useWideLayout();
 
   // Edit Resident Profile Modal
   const [editProfileVisible, setEditProfileVisible] = useState(false);
@@ -330,10 +333,79 @@ export default function PassScreen() {
     }
   };
 
+  const residentActions = (
+    <>
+          {/* Action Buttons Row */}
+          <View style={[styles.actionsContainer, wide && styles.sideTileWide]}>
+            <TouchableOpacity style={[styles.actionButton, wide && styles.actionButtonWide]} onPress={handleRefreshQr}>
+              <View style={styles.actionIconWrap}>
+                <Ionicons name="refresh" size={20} color="#1D4ED8" />
+              </View>
+              <Text style={styles.actionText}>Refresh QR</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionButton, wide && styles.actionButtonWide]}
+              onPress={() => setEditProfileVisible(true)}
+            >
+              <View style={styles.actionIconWrap}>
+                <Ionicons name="person" size={20} color="#1D4ED8" />
+              </View>
+              <Text style={styles.actionText}>Edit Details</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.actionButton, wide && styles.actionButtonWide]} onPress={handleShareResidentPass}>
+              <View style={[styles.actionIconWrap, { backgroundColor: '#DCFCE7', borderColor: '#BBF7D0' }]}>
+                <Ionicons name="share-social" size={20} color="#16A34A" />
+              </View>
+              <Text style={[styles.actionText, { color: '#16A34A' }]}>Share Pass</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.actionButton, wide && styles.actionButtonWide]} onPress={handleDownloadResidentQr}>
+              <View style={styles.actionIconWrap}>
+                <Ionicons name="download-outline" size={20} color="#1D4ED8" />
+              </View>
+              <Text style={styles.actionText}>Save QR</Text>
+            </TouchableOpacity>
+          </View>
+    </>
+  );
+
+  const visitorFilters = (
+    <>
+          {/* Visitor Privacy & Auto-Purge Strip */}
+          <TouchableOpacity
+            style={[styles.visitorPrivacyStrip, wide && styles.privacyStripWide]}
+            onPress={() => setLegalModalVisible(true)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="shield-checkmark" size={13} color="#15803D" style={{ marginRight: 6 }} />
+            <Text style={styles.visitorPrivacyText}>
+              48h Auto-Purge & Phone Masking Policy Active • View Privacy Notice &rarr;
+            </Text>
+          </TouchableOpacity>
+
+          {/* Quick Filter Tabs */}
+          <View style={[styles.filterRow, wide && styles.filterColumnWide]}>
+            {(['ALL', 'ACTIVE', 'SCHEDULED', 'PAST'] as const).map((filter) => (
+              <TouchableOpacity
+                key={filter}
+                style={[styles.filterChip, passFilter === filter && styles.filterChipActive]}
+                onPress={() => setPassFilter(filter)}
+              >
+                <Text style={[styles.filterChipText, passFilter === filter && styles.filterChipTextActive]}>
+                  {filter === 'ALL' ? 'All Passes' : filter === 'ACTIVE' ? 'Active Today' : filter === 'SCHEDULED' ? 'Scheduled' : 'Past / Used'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+    </>
+  );
+
   return (
     <View style={styles.container}>
       {/* Top Header */}
-      <View style={styles.topHeader}>
+      <View style={[styles.topHeader, wide && styles.topHeaderWide]}>
         <View>
           <Text style={styles.screenHeading}>Digital Access Passes</Text>
           <Text style={styles.screenSub}>Smart gate entry for residents and visitors</Text>
@@ -357,10 +429,12 @@ export default function PassScreen() {
         )}
       </View>
 
-      {/* Segmented Tab Switcher */}
-      <View style={styles.segmentedContainer}>
+      <PaneRow wide={wide} style={wide && styles.paneRowWide}>
+      <SidePane wide={wide}>
+      {/* Segmented Tab Switcher (a vertical menu in the left pane on wide screens) */}
+      <View style={[styles.segmentedContainer, wide && styles.segmentedWide]}>
         <TouchableOpacity
-          style={[styles.segmentBtn, activeTab === 'RESIDENT' && styles.segmentBtnActive]}
+          style={[styles.segmentBtn, wide && styles.segmentBtnWide, activeTab === 'RESIDENT' && styles.segmentBtnActive]}
           onPress={() => setActiveTab('RESIDENT')}
         >
           <Ionicons
@@ -375,7 +449,7 @@ export default function PassScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.segmentBtn, activeTab === 'VISITOR' && styles.segmentBtnActive]}
+          style={[styles.segmentBtn, wide && styles.segmentBtnWide, activeTab === 'VISITOR' && styles.segmentBtnActive]}
           onPress={() => setActiveTab('VISITOR')}
         >
           <Ionicons
@@ -393,9 +467,13 @@ export default function PassScreen() {
         </TouchableOpacity>
       </View>
 
+      {wide && (activeTab === 'RESIDENT' ? residentActions : visitorFilters)}
+      </SidePane>
+
+      <MainPane wide={wide}>
       {/* TAB 1: MY RESIDENT PASS */}
       {activeTab === 'RESIDENT' && (
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[styles.scrollContent, wide && styles.scrollContentWide]} showsVerticalScrollIndicator={false}>
           <View style={styles.card}>
             <View style={styles.cardHeader}>
               <View>
@@ -443,74 +521,17 @@ export default function PassScreen() {
             </Text>
           </View>
 
-          {/* Action Buttons Row */}
-          <View style={styles.actionsContainer}>
-            <TouchableOpacity style={styles.actionButton} onPress={handleRefreshQr}>
-              <View style={styles.actionIconWrap}>
-                <Ionicons name="refresh" size={20} color="#1D4ED8" />
-              </View>
-              <Text style={styles.actionText}>Refresh QR</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => setEditProfileVisible(true)}
-            >
-              <View style={styles.actionIconWrap}>
-                <Ionicons name="person" size={20} color="#1D4ED8" />
-              </View>
-              <Text style={styles.actionText}>Edit Details</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.actionButton} onPress={handleShareResidentPass}>
-              <View style={[styles.actionIconWrap, { backgroundColor: '#DCFCE7', borderColor: '#BBF7D0' }]}>
-                <Ionicons name="share-social" size={20} color="#16A34A" />
-              </View>
-              <Text style={[styles.actionText, { color: '#16A34A' }]}>Share Pass</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.actionButton} onPress={handleDownloadResidentQr}>
-              <View style={styles.actionIconWrap}>
-                <Ionicons name="download-outline" size={20} color="#1D4ED8" />
-              </View>
-              <Text style={styles.actionText}>Save QR</Text>
-            </TouchableOpacity>
-          </View>
+          {!wide && residentActions}
         </ScrollView>
       )}
 
       {/* TAB 2: VISITOR PASSES LIST */}
       {activeTab === 'VISITOR' && (
         <View style={{ flex: 1 }}>
-          {/* Visitor Privacy & Auto-Purge Strip */}
-          <TouchableOpacity
-            style={styles.visitorPrivacyStrip}
-            onPress={() => setLegalModalVisible(true)}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="shield-checkmark" size={13} color="#15803D" style={{ marginRight: 6 }} />
-            <Text style={styles.visitorPrivacyText}>
-              48h Auto-Purge & Phone Masking Policy Active • View Privacy Notice &rarr;
-            </Text>
-          </TouchableOpacity>
-
-          {/* Quick Filter Tabs */}
-          <View style={styles.filterRow}>
-            {(['ALL', 'ACTIVE', 'SCHEDULED', 'PAST'] as const).map((filter) => (
-              <TouchableOpacity
-                key={filter}
-                style={[styles.filterChip, passFilter === filter && styles.filterChipActive]}
-                onPress={() => setPassFilter(filter)}
-              >
-                <Text style={[styles.filterChipText, passFilter === filter && styles.filterChipTextActive]}>
-                  {filter === 'ALL' ? 'All Passes' : filter === 'ACTIVE' ? 'Active Today' : filter === 'SCHEDULED' ? 'Scheduled' : 'Past / Used'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          {!wide && visitorFilters}
 
           {/* Passes List */}
-          <ScrollView contentContainerStyle={styles.passesList} showsVerticalScrollIndicator={false}>
+          <ScrollView contentContainerStyle={[styles.passesList, wide && styles.passesListWide]} showsVerticalScrollIndicator={false}>
             {filteredPasses.length === 0 ? (
               <View style={styles.emptyState}>
                 <Ionicons name="ticket-outline" size={54} color="#CBD5E1" />
@@ -526,7 +547,8 @@ export default function PassScreen() {
                 </TouchableOpacity>
               </View>
             ) : (
-              filteredPasses.map((pass) => {
+              <CardGrid enabled={wide} minItemWidth={420} gap={12}>
+              {filteredPasses.map((pass) => {
                 const validity = checkPassTimingValidity(pass);
                 const isCancelled = pass.status === 'CANCELLED';
                 const isUsed = pass.status === 'USED';
@@ -647,12 +669,15 @@ export default function PassScreen() {
                     </View>
                   </View>
                 );
-              })
+              })}
+              </CardGrid>
             )}
             <View style={{ height: 40 }} />
           </ScrollView>
         </View>
       )}
+      </MainPane>
+      </PaneRow>
 
       {/* MODAL 1: ISSUE NEW VISITOR PASS */}
       <Modal visible={issueModalVisible} transparent animationType="slide" onRequestClose={() => setIssueModalVisible(false)}>
@@ -1007,6 +1032,47 @@ export default function PassScreen() {
 }
 
 const styles = StyleSheet.create({
+  paneRowWide: { paddingHorizontal: 20 },
+  topHeaderWide: { width: '100%', maxWidth: 1440, alignSelf: 'center' },
+  actionButtonWide: { width: '45%' },
+  segmentedWide: {
+    flexDirection: 'column',
+    marginHorizontal: 0,
+    marginBottom: 0,
+    padding: 8,
+    gap: 4,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  segmentBtnWide: {
+    flexGrow: 0,
+    flexBasis: 'auto',
+    justifyContent: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderRadius: 14,
+  },
+  sideTileWide: {
+    marginTop: 0,
+    padding: 16,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  privacyStripWide: { marginHorizontal: 0, marginTop: 0, marginBottom: 0 },
+  filterColumnWide: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 0,
+    marginBottom: 0,
+  },
+  scrollContentWide: { paddingHorizontal: 0 },
+  passesListWide: { paddingHorizontal: 0 },
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',

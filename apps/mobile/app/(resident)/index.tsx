@@ -8,7 +8,8 @@ import {
   Switch, 
   Platform, 
   Alert, 
-  RefreshControl 
+  RefreshControl,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,6 +28,7 @@ import { UpiPaymentScannerModal } from '../../components/payment/UpiPaymentScann
 import { LogoutConfirmModal } from '../../components/ui/LogoutConfirmModal';
 import { BentoTile } from '../../components/ui/BentoTile';
 import { BentoGrid } from '../../components/ui/BentoGrid';
+import { PAGE_MAX_WIDTH, useWideLayout } from '../../components/ui/TwoPaneLayout';
 import { DigitalGatePassTile } from '../../components/gate/DigitalGatePassTile';
 import { SosPanicModal } from '../../components/sos/SosPanicModal';
 import { ParcelPickupCard } from '../../components/parcel/ParcelPickupCard';
@@ -96,6 +98,118 @@ export default function ResidentHome() {
 
   // Adaptive font size for hero currency to prevent clipping
   const heroAmountFontSize = isSmallPhone ? 28 : (isTablet || isDesktop) ? 42 : 34;
+
+  // Wide screens: dues, gate pass and quick services in a left column; the live feed on the right.
+  const wide = useWideLayout();
+  const columnStyle = { gap: tileGap };
+
+  // 6. QUICK ACTION LAUNCHPAD PILLS (left column on wide screens, last tile on phones)
+  const quickLaunchpad = (
+          <View style={styles.quickLaunchpad}>
+            <Text style={styles.launchpadTitle}>Quick Services</Text>
+            <View style={styles.launchpadRow}>
+              <QuickActionPill 
+                icon="call-outline" 
+                label="Intercom" 
+                color="#0D9488" 
+                onPress={() => {
+                  triggerHaptic();
+                  router.push('/(resident)/community/directory' as any);
+                }} 
+              />
+              <QuickActionPill 
+                icon="storefront-outline" 
+                label="Bazaar" 
+                color="#2563EB" 
+                onPress={() => {
+                  triggerHaptic();
+                  router.push('/(resident)/bazaar' as any);
+                }} 
+              />
+              <QuickActionPill 
+                icon="build-outline" 
+                label="Ticket" 
+                color="#4338CA" 
+                onPress={() => {
+                  triggerHaptic();
+                  router.push('/(resident)/tickets/new');
+                }} 
+              />
+              <QuickActionPill 
+                icon="calendar-outline" 
+                label="Booking" 
+                color="#16A34A" 
+                onPress={() => {
+                  triggerHaptic();
+                  router.push('/(resident)/community/facilities');
+                }} 
+              />
+              <QuickActionPill 
+                icon="card-outline" 
+                label="Bills" 
+                color="#D97706" 
+                onPress={() => {
+                  triggerHaptic();
+                  router.push('/(resident)/billing');
+                }} 
+              />
+              <QuickActionPill 
+                icon="scan-outline" 
+                label="UPI Pay" 
+                color="#059669" 
+                onPress={() => {
+                  triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
+                  setUpiModalVisible(true);
+                }} 
+              />
+              <QuickActionPill 
+                icon="people-outline" 
+                label="Events" 
+                color="#E11D48" 
+                onPress={() => {
+                  triggerHaptic();
+                  router.push('/(resident)/community/events');
+                }} 
+              />
+              <QuickActionPill 
+                icon="warning-outline" 
+                label="SOS" 
+                color="#BE123C" 
+                onPress={() => {
+                  triggerHaptic(Haptics.ImpactFeedbackStyle.Heavy);
+                  setSosModalVisible(true);
+                }} 
+              />
+              <QuickActionPill 
+                icon="car-sport-outline" 
+                label="Parking" 
+                color="#C2410C" 
+                onPress={() => {
+                  triggerHaptic();
+                  setParkingModalVisible(true);
+                }} 
+              />
+              <QuickActionPill 
+                icon="car-outline" 
+                label="Cab / Auto" 
+                color="#4338CA" 
+                onPress={() => {
+                  triggerHaptic();
+                  setCabModalVisible(true);
+                }} 
+              />
+              <QuickActionPill 
+                icon="navigate-outline" 
+                label="Live Track" 
+                color="#4285F4" 
+                onPress={() => {
+                  triggerHaptic();
+                  router.push('/(resident)/tracking' as any);
+                }} 
+              />
+            </View>
+          </View>
+  );
 
   return (
     <View style={styles.screen}>
@@ -175,7 +289,11 @@ export default function ResidentHome() {
               accessibilityLabel="View Profile"
               accessibilityRole="button"
             >
-              <Ionicons name="person-outline" size={18} color="#475569" />
+              {user?.avatarUrl ? (
+                <Image source={{ uri: user.avatarUrl }} style={styles.headerAvatar} />
+              ) : (
+                <Ionicons name="person-outline" size={18} color="#475569" />
+              )}
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -195,7 +313,9 @@ export default function ResidentHome() {
         {/* ================================================================= */}
         {/* RESPONSIVE BENTO BOX CONTAINER                                    */}
         {/* ================================================================= */}
-        <BentoGrid>
+        <BentoGrid style={wide && { maxWidth: PAGE_MAX_WIDTH }}>
+        <View style={wide ? [styles.homeRow, { gap: tileGap }] : columnStyle}>
+         <View style={wide ? [styles.homeLeft, columnStyle] : columnStyle}>
 
           {/* 1. HERO TILE: Maintenance Dues & Financial Ledger */}
           <BentoTile color="white" style={styles.heroTile}>
@@ -299,6 +419,10 @@ export default function ResidentHome() {
             pin="5821"
           />
 
+          {wide && quickLaunchpad}
+         </View>
+
+         <View style={wide ? [styles.homeRight, columnStyle] : columnStyle}>
           {/* 2B. PENDING GATE PARCELS */}
           <ParcelPickupCard flatNumber={user?.flatNumber || 'B-204'} />
 
@@ -498,111 +622,9 @@ export default function ResidentHome() {
           {/* 5. COMMUNITY SOCIAL & POLL TILE */}
           <PollVoteCard userId={user?.id || 'u-1'} />
 
-          {/* 6. QUICK ACTION LAUNCHPAD PILLS */}
-          <View style={styles.quickLaunchpad}>
-            <Text style={styles.launchpadTitle}>Quick Services</Text>
-            <View style={styles.launchpadRow}>
-              <QuickActionPill 
-                icon="call-outline" 
-                label="Intercom" 
-                color="#0D9488" 
-                onPress={() => {
-                  triggerHaptic();
-                  router.push('/(resident)/community/directory' as any);
-                }} 
-              />
-              <QuickActionPill 
-                icon="storefront-outline" 
-                label="Bazaar" 
-                color="#2563EB" 
-                onPress={() => {
-                  triggerHaptic();
-                  router.push('/(resident)/bazaar' as any);
-                }} 
-              />
-              <QuickActionPill 
-                icon="build-outline" 
-                label="Ticket" 
-                color="#4338CA" 
-                onPress={() => {
-                  triggerHaptic();
-                  router.push('/(resident)/tickets/new');
-                }} 
-              />
-              <QuickActionPill 
-                icon="calendar-outline" 
-                label="Booking" 
-                color="#16A34A" 
-                onPress={() => {
-                  triggerHaptic();
-                  router.push('/(resident)/community/facilities');
-                }} 
-              />
-              <QuickActionPill 
-                icon="card-outline" 
-                label="Bills" 
-                color="#D97706" 
-                onPress={() => {
-                  triggerHaptic();
-                  router.push('/(resident)/billing');
-                }} 
-              />
-              <QuickActionPill 
-                icon="scan-outline" 
-                label="UPI Pay" 
-                color="#059669" 
-                onPress={() => {
-                  triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
-                  setUpiModalVisible(true);
-                }} 
-              />
-              <QuickActionPill 
-                icon="people-outline" 
-                label="Events" 
-                color="#E11D48" 
-                onPress={() => {
-                  triggerHaptic();
-                  router.push('/(resident)/community/events');
-                }} 
-              />
-              <QuickActionPill 
-                icon="warning-outline" 
-                label="SOS" 
-                color="#BE123C" 
-                onPress={() => {
-                  triggerHaptic(Haptics.ImpactFeedbackStyle.Heavy);
-                  setSosModalVisible(true);
-                }} 
-              />
-              <QuickActionPill 
-                icon="car-sport-outline" 
-                label="Parking" 
-                color="#C2410C" 
-                onPress={() => {
-                  triggerHaptic();
-                  setParkingModalVisible(true);
-                }} 
-              />
-              <QuickActionPill 
-                icon="car-outline" 
-                label="Cab / Auto" 
-                color="#4338CA" 
-                onPress={() => {
-                  triggerHaptic();
-                  setCabModalVisible(true);
-                }} 
-              />
-              <QuickActionPill 
-                icon="navigate-outline" 
-                label="Live Track" 
-                color="#4285F4" 
-                onPress={() => {
-                  triggerHaptic();
-                  router.push('/(resident)/tracking' as any);
-                }} 
-              />
-            </View>
-          </View>
+          {!wide && quickLaunchpad}
+         </View>
+        </View>
 
         </BentoGrid>
 
@@ -675,6 +697,10 @@ function QuickActionPill({ icon, label, color, onPress }: QuickActionPillProps) 
 }
 
 const styles = StyleSheet.create({
+  homeRow: { flexDirection: 'row', alignItems: 'flex-start' },
+  headerAvatar: { width: 30, height: 30, borderRadius: 15 },
+  homeLeft: { width: 420, flexShrink: 0 },
+  homeRight: { flex: 1, minWidth: 0 },
   screen: {
     flex: 1,
     backgroundColor: '#F8F9FA',
