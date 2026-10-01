@@ -8,6 +8,8 @@ import { useResponsive } from '../../hooks/useResponsive';
 import { RECAPTCHA_CONTAINER_ID, useFirebaseSignIn } from '../../hooks/useFirebaseSignIn';
 import { APARTMENT_LEGAL_SECTIONS } from '../../constants/legalContent';
 import { COLORS } from '../../constants/colors';
+import { DEFAULT_SIGNUP_ROLE, SignupRolePicker } from '../../components/auth/SignupRolePicker';
+import { getChosenSignupRole, setChosenSignupRole } from '../../services/pendingRegistration';
 
 const POLICIES = APARTMENT_LEGAL_SECTIONS.filter((s) => s.key === 'TERMS' || s.key === 'PRIVACY');
 
@@ -20,6 +22,11 @@ export default function RegisterScreen() {
   const { containerPadding, isPhone } = useResponsive();
 
   const [agreed, setAgreed] = useState(false);
+  const [role, setRole] = useState(getChosenSignupRole() ?? DEFAULT_SIGNUP_ROLE);
+  const chooseRole = (key: string) => {
+    setRole(key);
+    setChosenSignupRole(key); // the complete-profile step starts with this role
+  };
   const [openPolicy, setOpenPolicy] = useState<string | null>(null);
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
@@ -68,7 +75,7 @@ export default function RegisterScreen() {
           {/* Sign-up */}
           <BentoTile style={styles.fill}>
             <Text style={styles.cardTitle}>Create your account</Text>
-            <Text style={styles.cardSubtitle}>Residents sign up here. Guards, vendors and committee members get an account from the society admin.</Text>
+            <Text style={styles.cardSubtitle}>Choose your role. Residents get access straight away; staff roles are approved by your society admin.</Text>
 
             {error && (
               <View style={styles.errorBox}>
@@ -76,6 +83,10 @@ export default function RegisterScreen() {
                 <Text style={styles.errorText}>{error}</Text>
               </View>
             )}
+
+            <View style={{ marginBottom: 14 }}>
+              <SignupRolePicker value={role} onChange={chooseRole} />
+            </View>
 
             <TouchableOpacity
               style={styles.agreeRow}
@@ -175,8 +186,8 @@ export default function RegisterScreen() {
         <BentoRow>
           {[
             { color: 'lavender' as const, icon: 'person-circle', step: '1', title: 'Verify it’s you', body: 'Continue with Google, or get a 6-digit code by SMS.' },
-            { color: 'sage' as const, icon: 'key', step: '2', title: 'Enter your society code', body: 'Your committee shares it — it looks like AMA-001.' },
-            { color: 'peach' as const, icon: 'home', step: '3', title: 'You’re in', body: 'You join as a resident. The committee links your flat.' },
+            { color: 'sage' as const, icon: 'key', step: '2', title: 'Pick your role & society', body: 'Owner, tenant or staff, plus the society code (e.g. AMA-001).' },
+            { color: 'peach' as const, icon: 'home', step: '3', title: 'You’re in', body: 'Residents start right away. Staff roles open once the admin approves.' },
           ].map((s) => (
             <BentoTile key={s.step} color={s.color} style={styles.fill}>
               <View style={styles.stepHead}>

@@ -1,4 +1,5 @@
-import { IsJWT, IsNotEmpty, IsOptional, IsPhoneNumber, IsString, Matches, MaxLength, ValidateIf } from 'class-validator';
+import { IsIn, IsJWT, IsNotEmpty, IsOptional, IsPhoneNumber, IsString, Matches, MaxLength, ValidateIf } from 'class-validator';
+import { SIGNUP_ROLE_VALUES } from '../signup-roles';
 
 export class FirebaseLoginDto {
   @IsJWT()
@@ -22,6 +23,11 @@ export class CompleteRegistrationDto {
   @IsString()
   @IsNotEmpty()
   societyCode: string;
+
+  // Defaults to RESIDENT_OWNER. Staff roles wait for admin approval; ADMIN is not allowed.
+  @IsOptional()
+  @IsIn(SIGNUP_ROLE_VALUES)
+  role?: string;
 }
 
 /** Max length of a profile picture data URL (~300 KB of image). The app sends ~20-40 KB. */

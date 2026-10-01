@@ -218,7 +218,7 @@ export default function LoginScreen() {
     } catch (err: any) {
       const status = err?.response?.status;
       setAuthError(
-        status === 401
+        status === 401 || status === 403
           ? err.response.data?.message || 'Sign-in was rejected. Please try again.'
           : status
             ? `Sign-in is unavailable right now (server error ${status}). Please try again later.`
@@ -286,6 +286,8 @@ export default function LoginScreen() {
           setAuthError(
             status === 400 || status === 401
               ? 'Invalid email or password. Please verify your credentials.'
+              : status === 403
+              ? err.response.data?.message || 'This account cannot sign in yet.'
               : `Sign-in is unavailable right now (server error ${status}). Please try again later.`
           );
           return;

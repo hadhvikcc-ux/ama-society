@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, BadRequestException, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
@@ -11,6 +11,19 @@ import { LoginDto } from './dto/login.dto';
 import { CompleteRegistrationDto } from './dto/firebase-auth.dto';
 import { FirebaseAuthService } from './firebase-auth.service';
 import { societyLookup } from '../common/society-code';
+import { resolveSignupRole } from './signup-roles';
+
+export const PENDING_APPROVAL_MESSAGE =
+  'Your account is waiting for approval from your society admin. You can sign in once it is approved.';
+
+/** Blocks sign-in for disabled accounts and staff sign-ups an admin has not approved. */
+function assertCanSignIn(user: { isActive: boolean; approvalStatus?: string | null }) {
+  if (!user.isActive) throw new UnauthorizedException('This account is disabled');
+  if (user.approvalStatus === 'PENDING') throw new ForbiddenException(PENDING_APPROVAL_MESSAGE);
+  if (user.approvalStatus === 'REJECTED') {
+    throw new ForbiddenException('Your sign-up request was declined. Please contact your society office.');
+  }
+}
 
 // What sign-in responses return alongside the user: their flat and their society's name and code.
 const SESSION_USER_INCLUDE = { flat: true, society: { select: { code: true, name: true } } } as const;
@@ -68,7 +81,7 @@ export class AuthService {
     const user = await this.prisma.user.findFirst({ where, include: SESSION_USER_INCLUDE });
 
     if (user) {
-      if (!user.isActive) throw new UnauthorizedException('This account is disabled');
+      assertCanSignIn(user);
       const { passwordHash: _, ...safeUser } = user;
       const tokens = await this.generateTokens(user.id, user.role, user.email ?? '', user.societyId);
       return { user: safeUser, ...tokens };
@@ -108,6 +121,7 @@ export class AuthService {
       throw new ConflictException('An account with this email or mobile number already exists. Please sign in instead.');
     }
 
+    const signup = resolveSignupRole(dto.role);
     let user;
     try {
       user = await this.prisma.user.create({
@@ -115,7 +129,9 @@ export class AuthService {
           name: dto.name.trim(),
           email: claims.email ?? null,
           phone: e164,
-          role: 'RESIDENT',
+          role: signup.role,
+          tenancyType: signup.tenancyType,
+          approvalStatus: signup.needsApproval ? 'PENDING' : 'APPROVED',
           societyId: society.id,
         },
         include: SESSION_USER_INCLUDE,
@@ -127,7 +143,15 @@ export class AuthService {
       throw error;
     }
 
+    return this.signUpResponse(user);
+  }
+
+  /** Signed in at once, or (staff roles) no tokens until an admin approves the account. */
+  private async signUpResponse(user: any) {
     const { passwordHash: _, ...safeUser } = user;
+    if (user.approvalStatus === 'PENDING') {
+      return { pendingApproval: true, message: PENDING_APPROVAL_MESSAGE, user: safeUser };
+    }
     const tokens = await this.generateTokens(user.id, user.role, user.email ?? '', user.societyId);
     return { user: safeUser, ...tokens };
   }
@@ -140,8 +164,8 @@ export class AuthService {
       throw new NotFoundException('Society not found');
     }
 
-    // RegisterDto only admits resident roles; never let the caller pick a privileged one.
-    const prismaRole = 'RESIDENT';
+    // RegisterDto never admits ADMIN; staff roles start PENDING until an admin approves them.
+    const signup = resolveSignupRole(dto.role);
 
     const user = await this.prisma.user.create({
       data: {
@@ -149,14 +173,15 @@ export class AuthService {
         email: dto.email,
         phone: dto.phone,
         passwordHash: hashedPassword,
-        role: prismaRole,
+        role: signup.role,
+        tenancyType: signup.tenancyType,
+        approvalStatus: signup.needsApproval ? 'PENDING' : 'APPROVED',
         societyId: society.id,
       },
+      include: SESSION_USER_INCLUDE,
     });
 
-    const { passwordHash: _, ...safeUser } = user;
-    const tokens = await this.generateTokens(user.id, user.role, user.email ?? '', user.societyId);
-    return { user: safeUser, ...tokens };
+    return this.signUpResponse(user);
   }
 
   async login(dto: LoginDto) {
@@ -173,6 +198,7 @@ export class AuthService {
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
+    assertCanSignIn(user);
 
     const { passwordHash: _, ...safeUser } = user;
     const tokens = await this.generateTokens(user.id, user.role, user.email ?? '', user.societyId);
@@ -247,7 +273,7 @@ export class AuthService {
         where: { id: payload.sub },
       });
 
-      if (!user) {
+      if (!user || !user.isActive || user.approvalStatus !== 'APPROVED') {
         throw new UnauthorizedException('User not found');
       }
 
@@ -266,6 +292,30 @@ export class AuthService {
     });
     const { passwordHash: _, ...safeUser } = user;
     return safeUser;
+  }
+
+  /** Staff sign-ups waiting for approval in the admin's own society. */
+  async listPendingApprovals(societyId: string) {
+    // Without a society id the filters below would match every society.
+    if (!societyId) throw new ForbiddenException('Your account is not linked to a society');
+    return this.prisma.user.findMany({
+      where: { societyId, approvalStatus: 'PENDING' },
+      select: { id: true, name: true, email: true, phone: true, role: true, createdAt: true },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  async decideApproval(societyId: string, userId: string, approve: boolean) {
+    // Without a society id the filters below would match every society.
+    if (!societyId) throw new ForbiddenException('Your account is not linked to a society');
+    const user = await this.prisma.user.findFirst({ where: { id: userId, societyId, approvalStatus: 'PENDING' } });
+    if (!user) throw new NotFoundException('No pending sign-up with that id in your society');
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: { approvalStatus: approve ? 'APPROVED' : 'REJECTED' },
+      select: { id: true, name: true, role: true, approvalStatus: true },
+    });
+    return updated;
   }
 
   async getMe(userId: string) {

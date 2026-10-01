@@ -46,7 +46,7 @@ export function useFirebaseSignIn({ setError, setLoading }: Options) {
     } catch (err: any) {
       const status = err?.response?.status;
       setError(
-        status === 401
+        status === 401 || status === 403
           ? err.response.data?.message || 'Sign-in was rejected. Please try again.'
           : status
             ? `Sign-in is unavailable right now (server error ${status}). Please try again later.`

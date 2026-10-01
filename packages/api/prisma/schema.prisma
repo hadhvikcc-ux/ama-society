@@ -17,6 +17,12 @@ enum UserRole {
   SUPPLIER
 }
 
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum TenancyType {
   OWNER
   TENANT
@@ -170,6 +176,10 @@ model User {
   fcmToken     String?
   // Profile picture as a small data URL (data:image/jpeg;base64,...), resized by the app to ~320px.
   avatarUrl    String?
+  // Owner or tenant, for residents (set from the sign-up role).
+  tenancyType  TenancyType?
+  // Staff roles picked at sign-up stay PENDING until a society admin approves them.
+  approvalStatus ApprovalStatus @default(APPROVED)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

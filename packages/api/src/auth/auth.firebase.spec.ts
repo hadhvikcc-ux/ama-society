@@ -57,9 +57,18 @@ describe('Firebase sign-in', () => {
       .rejects.toBeInstanceOf(BadRequestException);
 
     const done: any = await service.completeRegistration({ registrationToken: first.registrationToken, name: ' Asha ', phone: '98765 43210', societyCode: 'AMA-001' });
-    expect(prisma.user.create.mock.calls[0][0].data).toEqual({ name: 'Asha', email: 'asha@gmail.com', phone: '+919876543210', role: 'RESIDENT', societyId: 's1' });
+    expect(prisma.user.create.mock.calls[0][0].data).toEqual({ name: 'Asha', email: 'asha@gmail.com', phone: '+919876543210', role: 'RESIDENT', tenancyType: 'OWNER', approvalStatus: 'APPROVED', societyId: 's1' });
     expect(prisma.society.findFirst.mock.calls.at(-1)[0].where).toEqual({ OR: [{ code: 'AMA-001' }, { id: 'AMA-001' }] });
     expect(done.accessToken).toBeDefined();
+  });
+
+  it('creates a pending account with no tokens when a staff role is chosen', async () => {
+    const { service, prisma } = setup(phone, null);
+    const first: any = await service.firebaseLogin('tok');
+    const done: any = await service.completeRegistration({ registrationToken: first.registrationToken, name: 'Ravi', societyCode: 'AMA-001', role: 'GUARD' });
+    expect(prisma.user.create.mock.calls[0][0].data).toMatchObject({ role: 'GUARD', approvalStatus: 'PENDING', tenancyType: null });
+    expect(done.pendingApproval).toBe(true);
+    expect(done.accessToken).toBeUndefined();
   });
 
   it('uses the OTP-verified phone and ignores a typed one', async () => {

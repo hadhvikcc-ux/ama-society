@@ -14,3 +14,12 @@ export const setPendingRegistration = (value: PendingRegistration | null) => {
 };
 
 export const getPendingRegistration = () => pending;
+
+// Role picked on the sign-up page (e.g. RESIDENT_TENANT, GUARD), used as the default on complete-profile.
+let chosenSignupRole: string | null = null;
+
+export const setChosenSignupRole = (role: string | null) => {
+  chosenSignupRole = role;
+};
+
+export const getChosenSignupRole = () => chosenSignupRole;

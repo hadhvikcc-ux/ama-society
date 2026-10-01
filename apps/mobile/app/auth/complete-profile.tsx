@@ -6,7 +6,8 @@ import { api } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
 import { getAuthorizedHomeForRole } from '../../utils/rbac';
 import { userFromApi } from '../../utils/session';
-import { getPendingRegistration, setPendingRegistration } from '../../services/pendingRegistration';
+import { getChosenSignupRole, getPendingRegistration, setChosenSignupRole, setPendingRegistration } from '../../services/pendingRegistration';
+import { DEFAULT_SIGNUP_ROLE, SIGNUP_ROLE_OPTIONS, SignupRolePicker } from '../../components/auth/SignupRolePicker';
 import { BentoGrid, BentoRow } from '../../components/ui/BentoGrid';
 import { BentoTile } from '../../components/ui/BentoTile';
 import { useResponsive } from '../../hooks/useResponsive';
@@ -21,11 +22,36 @@ export default function CompleteProfileScreen() {
   const [name, setName] = useState(pending?.name ?? '');
   const [phone, setPhone] = useState('');
   const [societyCode, setSocietyCode] = useState('');
+  const [role, setRole] = useState(getChosenSignupRole() ?? DEFAULT_SIGNUP_ROLE);
+  // Set when a staff sign-up is created but waits for the admin's approval.
+  const [awaitingApproval, setAwaitingApproval] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   // Opened directly or after a refresh: the in-memory sign-up session is gone.
-  if (!pending) return <Redirect href="/auth/login" />;
+  if (!pending && !awaitingApproval) return <Redirect href="/auth/login" />;
+  if (awaitingApproval) {
+    const roleTitle = SIGNUP_ROLE_OPTIONS.find((o) => o.key === role)?.title ?? 'Staff';
+    return (
+      <View style={[styles.container, { justifyContent: 'center', padding: containerPadding }]}>
+        <BentoTile style={styles.pendingCard}>
+          <View style={styles.pendingIcon}>
+            <Ionicons name="time" size={30} color="#B45309" />
+          </View>
+          <Text style={styles.title}>Waiting for approval</Text>
+          <Text style={[styles.subtitle, { textAlign: 'center' }]}>
+            Your <Text style={{ fontWeight: '800', color: '#111827' }}>{roleTitle}</Text> account has been created. {awaitingApproval}
+          </Text>
+          <TouchableOpacity onPress={() => router.replace('/auth/login')} accessibilityRole="button">
+            <View style={styles.primaryBtn}>
+              <Text style={styles.primaryBtnText}>Back to sign in</Text>
+            </View>
+          </TouchableOpacity>
+        </BentoTile>
+      </View>
+    );
+  }
+  if (!pending) return null;
   const needsPhone = !pending.phone;
 
   const submit = async () => {
@@ -40,9 +66,15 @@ export default function CompleteProfileScreen() {
         registrationToken: pending.registrationToken,
         name: name.trim(),
         societyCode: societyCode.trim(),
+        role,
         ...(needsPhone ? { phone: `+91${phone.trim()}` } : {}),
       });
       setPendingRegistration(null);
+      setChosenSignupRole(null);
+      if (res.data.pendingApproval) {
+        setAwaitingApproval(res.data.message || 'You can sign in once your society admin approves it.');
+        return;
+      }
       const user = userFromApi(res.data.user);
       setUser(user);
       setTokens(res.data.accessToken, res.data.refreshToken);
@@ -87,7 +119,7 @@ export default function CompleteProfileScreen() {
 
             <BentoTile style={{ flexGrow: 1 }}>
               <Text style={styles.title}>Complete your profile</Text>
-              <Text style={styles.subtitle}>You join as a resident. The committee can change your role or link your flat later.</Text>
+              <Text style={styles.subtitle}>Residents get access straight away. Staff roles are approved by your society admin first.</Text>
 
               {error && (
                 <View style={styles.errorBox}>
@@ -95,6 +127,10 @@ export default function CompleteProfileScreen() {
                   <Text style={styles.errorText}>{error}</Text>
                 </View>
               )}
+
+              <View style={{ marginBottom: 14 }}>
+                <SignupRolePicker value={role} onChange={setRole} />
+              </View>
 
               <Text style={styles.label}>Full name</Text>
               <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="e.g. Asha Rao" autoComplete="name" />
@@ -146,6 +182,8 @@ const styles = StyleSheet.create({
   codeHint: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#FFFFFF', borderRadius: 14, padding: 14 },
   codeHintText: { flex: 1, color: '#1E3A8A', fontSize: 13, lineHeight: 19 },
   title: { fontSize: 24, fontWeight: '800', color: '#111827' },
+  pendingCard: { maxWidth: 520, width: '100%', alignSelf: 'center', alignItems: 'center', gap: 6 },
+  pendingIcon: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#FEF3C7', alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
   subtitle: { fontSize: 14, color: '#6B7280', marginTop: 6, marginBottom: 18 },
   label: { fontSize: 13, fontWeight: '700', color: '#374151', marginBottom: 6 },
   input: { borderWidth: 1.5, borderColor: '#E5E7EB', borderRadius: 14, height: 48, paddingHorizontal: 14, fontSize: 15, backgroundColor: '#F9FAFB', marginBottom: 14 },

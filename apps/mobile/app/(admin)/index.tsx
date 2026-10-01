@@ -8,6 +8,7 @@ import { useSocietyStore } from '../../stores/societyStore';
 import { BentoGrid, BentoRow } from '../../components/ui/BentoGrid';
 import { BentoTile, BentoTileColor } from '../../components/ui/BentoTile';
 import { useResponsive } from '../../hooks/useResponsive';
+import { PendingApprovalsTile } from '../../components/admin/PendingApprovalsTile';
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -112,6 +113,8 @@ export default function AdminDashboard() {
               </View>
             </BentoTile>
           </BentoRow>
+
+          <PendingApprovalsTile />
 
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: tileGap }}>
             {stats.map((stat, i) => (

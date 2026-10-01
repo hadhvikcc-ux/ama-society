@@ -2,7 +2,8 @@ import { User } from '../stores/authStore';
 
 /** Maps a user returned by the API (/auth/login, /auth/firebase, /auth/register/complete) to the app's User. */
 export function userFromApi(apiUser: any, fallbackEmail = ''): User {
-  const role = (apiUser.role || 'resident').toLowerCase();
+  let role = (apiUser.role || 'resident').toLowerCase();
+  if (role === 'resident' && apiUser.tenancyType) role = `resident_${String(apiUser.tenancyType).toLowerCase()}`;
   const isResident = role.includes('resident');
   return {
     id: apiUser.id,
